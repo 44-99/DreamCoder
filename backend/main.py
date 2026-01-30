@@ -9,7 +9,7 @@ from starlette.staticfiles import StaticFiles
 
 from core.dependencies import engine
 from core.models import Base
-from routers import auth, user
+from routers import auth, user, game_generation
 
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -32,3 +32,4 @@ async def health_check():
 
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(game_generation.router)

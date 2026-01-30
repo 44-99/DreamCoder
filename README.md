@@ -1,15 +1,16 @@
-# DreamCoder - AI游戏生成系统
+# DreamCoder - AI游戏生成与聊天系统
 
-基于 LangChain/LangGraph 的智能游戏生成平台，通过自然语言描述自动生成可运行的Web游戏项目。
+基于 LangChain/LangGraph 的智能游戏生成平台，通过自然语言对话界面自动生成可运行的Web游戏项目，支持实时聊天交互。
 
 ## 🚀 核心特性
 
-- **AI驱动**: 使用 GPT-4o-mini 进行智能需求分析、架构设计和代码生成
+- **AI对话驱动**: 通过自然语言聊天界面进行游戏需求分析和代码生成
 - **LangGraph工作流**: 状态图管理游戏生成全流程，支持追踪和恢复
 - **RAG知识库**: ChromaDB向量检索相似游戏模板
 - **MCP工具**: 文件系统、终端等工具调用支持
-- **实时预览**: 生成的游戏支持即时预览
+- **实时预览**: 生成的游戏支持即时预览和编辑
 - **代码审查**: 自动生成质量评分和测试报告
+- **用户管理**: 集成账号管理、头像上传、密码修改等功能
 
 ## 🛠️ 技术栈
 
@@ -27,6 +28,8 @@
 - **Vite**: 快速构建工具
 - **Pinia**: 状态管理
 - **Vue Router**: 路由管理
+- **Font Awesome**: 图标库
+- **TDesign**: UI组件库
 
 ## 📦 快速开始
 
@@ -103,22 +106,26 @@ docker-compose --profile production up -d
 ## 🎮 使用示例
 
 1. **注册/登录**
-   - 访问登录页面
-   - 输入用户名、密码和验证码完成注册
+   - 访问聊天界面完成用户注册和登录
 
-2. **生成游戏**
-   - 在游戏生成器页面描述你想要的游戏
+2. **通过对话生成游戏**
+   - 在聊天界面描述你想要的游戏
    - 例如: "我想要一个贪吃蛇游戏，可以用方向键控制蛇吃食物"
-   - 点击"开始生成"
+   - AI会通过对话确认需求并生成游戏
 
-3. **预览和编辑**
+3. **实时预览和编辑**
    - 实时查看生成进度日志
    - 在预览区域试玩游戏
    - 查看和编辑生成的源代码
    - 查看项目信息和质量评分
 
-4. **历史管理**
-   - 在历史项目页面查看所有生成的游戏
+4. **账号管理**
+   - 点击用户头像打开账号管理弹窗
+   - 上传头像、修改用户名、电话、邮箱
+   - 修改密码等个人信息管理
+
+5. **历史管理**
+   - 在聊天界面查看历史对话和项目
    - 重新加载和预览历史项目
 
 ## 📁 项目结构
@@ -142,10 +149,12 @@ DreamCoder/
 ├── frontend/
 │   ├── src/
 │   │   ├── views/        # 页面组件
-│   │   │   ├── LoginView.vue
-│   │   │   ├── ProfileView.vue
-│   │   │   └── GameGeneratorView.vue
+│   │   │   └── GameChatView.vue  # 主聊天界面
+│   │   ├── components/   # 组件
+│   │   │   └── ProfileModal.vue  # 账号管理弹窗
 │   │   ├── stores/       # 状态管理
+│   │   ├── utils/        # 工具函数
+│   │   │   └── htmlGenerator.js  # HTML生成器
 │   │   └── router/       # 路由配置
 │   └── package.json
 ├── docker-compose.yml    # Docker编排
@@ -160,7 +169,14 @@ DreamCoder/
 - `POST /auth/login` - 用户登录
 - `POST /auth/verification` - 发送验证码
 
-### 游戏生成
+### 用户管理
+- `PATCH /user/avatar` - 上传头像
+- `PATCH /user/username` - 修改用户名
+- `PATCH /user/phone` - 修改电话
+- `PATCH /user/email` - 修改邮箱
+- `POST /user/password` - 修改密码
+
+### 游戏生成与聊天
 - `POST /game/generate` - 生成游戏
 - `GET /game/generate/stream` - 流式生成（SSE）
 - `GET /game/projects` - 获取项目列表

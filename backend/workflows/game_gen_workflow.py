@@ -2,6 +2,8 @@
 游戏生成工作流 - 基于LangGraph的AI游戏生成系统
 使用状态图管理游戏生成流程，支持LangSmith追踪
 """
+
+
 import os
 from typing import TypedDict, Annotated, List, Dict, Any, Optional
 from datetime import datetime
@@ -62,13 +64,55 @@ class FileGenerationResult(BaseModel):
     language: str = Field(description="编程语言")
 
 
-# 初始化LLM
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0.7,
-    openai_api_key=os.getenv("OPENAI_API_KEY"),
-    openai_api_base=os.getenv("OPENAI_BASE_URL")
-)
+# 初始化LLM - 支持多种模型提供商
+def get_llm():
+    """根据环境变量选择LLM提供商"""
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+
+    # 代码生成任务推荐使用较低的温度以保证稳定性和准确性
+    code_gen_temp = float(os.getenv("CODE_GEN_TEMPERATURE", "0.2"))
+    logger.info(f"Using LLM provider: {provider} with temperature: {code_gen_temp} with API_KEY: {os.getenv('DEEPSEEK_API_KEY')} and BASE_URL: {os.getenv('DEEPSEEK_BASE_URL')}")
+    if provider == "deepseek":
+        # DeepSeek 使用 OpenAI 兼容的 API
+        # 官方推荐代码生成使用 temperature=0.0
+        return ChatOpenAI(
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            temperature=code_gen_temp,
+            openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+            openai_api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+        )
+    elif provider == "qwen":
+        # 通义千问 (阿里云)
+        return ChatOpenAI(
+            model=os.getenv("QWEN_MODEL", "qwen-plus"),
+            temperature=code_gen_temp,
+            openai_api_key=os.getenv("QWEN_API_KEY"),
+            openai_api_base=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+        )
+    else:
+        # 默认使用 OpenAI
+        return ChatOpenAI(
+            model=os.getenv("OPENAI_MODEL", "gpt-4o"),
+            temperature=code_gen_temp,
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_base=os.getenv("OPENAI_BASE_URL")
+        )
+
+
+def get_provider():
+    """获取当前LLM提供商"""
+    return os.getenv("LLM_PROVIDER", "openai").lower()
+
+
+def supports_structured_output():
+    """检查当前提供商是否支持结构化输出"""
+    provider = get_provider()
+    # DeepSeek 等国内模型不支持 response_format
+    unsupported_providers = ["deepseek", "qwen", "zhipu", "moonshot", "baichuan"]
+    return provider not in unsupported_providers
+
+
+llm = get_llm()
 
 
 # 1. 需求分析节点
@@ -76,45 +120,79 @@ async def requirement_analyzer_node(state: GameState) -> GameState:
     """分析用户需求，提取游戏规格"""
     logger.info(f"需求分析节点开始执行，用户输入: {state['user_input']}")
 
-    system_prompt = """
-    你是一个游戏需求分析专家。分析用户的自然语言描述，提取游戏的关键信息。
-
-    请按照以下格式返回JSON：
-    - game_type: 游戏类型
-    - core_mechanics: 核心玩法机制
-    - visual_style: 视觉风格
-    - difficulty: 难度级别
-    - controls: 控制方式
-    - features: 额外功能
-
-    支持的游戏类型包括: 贪吃蛇, 打砖块, 打地鼠, 躲避球, 猜数字, 俄罗斯方块, 跳一跳, 弹球游戏
-    """
-
     try:
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=state['user_input'])
-        ]
+        if supports_structured_output():
+            # 支持结构化输出的提供商（如 OpenAI）
+            system_prompt = """
+            你是一个游戏需求分析专家。分析用户的自然语言描述，提取游戏的关键信息。
 
-        # 使用结构化输出
-        structured_llm = llm.with_structured_output(GameRequirements)
-        result = await structured_llm.ainvoke(messages)
+            支持的游戏类型例如: 贪吃蛇, 打砖块, 打地鼠, 躲避球, 猜数字, 俄罗斯方块, 跳一跳, 弹球游戏
+            """
 
-        requirements = {
-            "game_type": result.game_type,
-            "core_mechanics": result.core_mechanics,
-            "visual_style": result.visual_style,
-            "difficulty": result.difficulty,
-            "controls": result.controls,
-            "features": result.features
-        }
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=state['user_input'])
+            ]
+
+            structured_llm = llm.with_structured_output(GameRequirements)
+            result = await structured_llm.ainvoke(messages)
+
+            requirements = {
+                "game_type": result.game_type,
+                "core_mechanics": result.core_mechanics,
+                "visual_style": result.visual_style,
+                "difficulty": result.difficulty,
+                "controls": result.controls,
+                "features": result.features
+            }
+        else:
+            # 不支持结构化输出的提供商（如 DeepSeek），使用 JSON 提示
+            system_prompt = """
+            你是一个游戏需求分析专家。分析用户的自然语言描述，提取游戏的关键信息。
+
+            请严格按照以下JSON格式返回，不要有任何其他文字：
+            {
+                "game_type": "游戏类型",
+                "core_mechanics": ["核心玩法机制1", "核心玩法机制2"],
+                "visual_style": "视觉风格",
+                "difficulty": "难度级别",
+                "controls": ["控制方式1", "控制方式2"],
+                "features": ["额外功能1", "额外功能2"]
+            }
+
+            游戏类型例如: 贪吃蛇, 打砖块, 打地鼠, 躲避球, 猜数字, 俄罗斯方块, 跳一跳, 弹球游戏
+
+            视觉风格例如: 极简, 复古, 卡通, 现代化
+
+            难度级别例如: 简单, 中等, 困难
+
+            控制方式例如: 键盘方向键, WASD, 鼠标点击, 触摸
+
+            额外功能例如: 计分系统, 等级系统, 音效, 动画效果
+            """
+
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=state['user_input'])
+            ]
+
+            response = await llm.ainvoke(messages)
+            content = response.content.strip()
+
+            # 提取 JSON 部分
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            requirements = json.loads(content)
 
         state['requirements'] = requirements
-        state['game_type'] = result.game_type
+        state['game_type'] = requirements.get('game_type', '未知')
         state['logs'].append({
             "step": "requirement_analyzer",
             "status": "completed",
-            "message": f"需求分析完成: {result.game_type}",
+            "message": f"需求分析完成: {state['game_type']}",
             "timestamp": datetime.now().isoformat()
         })
         state['current_step'] = "architecture_design"
@@ -151,33 +229,72 @@ async def architect_designer_node(state: GameState) -> GameState:
     requirements = state.get('requirements', {})
 
     try:
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"""
-            游戏类型: {requirements.get('game_type', '未知')}
-            核心机制: {', '.join(requirements.get('core_mechanics', []))}
-            视觉风格: {requirements.get('visual_style', '极简')}
-            难度: {requirements.get('difficulty', '中等')}
-            控制方式: {', '.join(requirements.get('controls', []))}
-            额外功能: {', '.join(requirements.get('features', []))}
-            """)
-        ]
+        if supports_structured_output():
+            # 支持结构化输出的提供商
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"""
+                游戏类型: {requirements.get('game_type', '未知')}
+                核心机制: {', '.join(requirements.get('core_mechanics', []))}
+                视觉风格: {requirements.get('visual_style', '极简')}
+                难度: {requirements.get('difficulty', '中等')}
+                控制方式: {', '.join(requirements.get('controls', []))}
+                额外功能: {', '.join(requirements.get('features', []))}
+                """)
+            ]
 
-        structured_llm = llm.with_structured_output(GameArchitecture)
-        result = await structured_llm.ainvoke(messages)
+            structured_llm = llm.with_structured_output(GameArchitecture)
+            result = await structured_llm.ainvoke(messages)
 
-        architecture = {
-            "tech_stack": result.tech_stack,
-            "file_structure": result.file_structure,
-            "main_components": result.main_components,
-            "key_functions": result.key_functions
-        }
+            architecture = {
+                "tech_stack": result.tech_stack,
+                "file_structure": result.file_structure,
+                "main_components": result.main_components,
+                "key_functions": result.key_functions
+            }
+        else:
+            # 不支持结构化输出的提供商，使用 JSON 提示
+            prompt = f"""{system_prompt}
+
+请严格按照以下JSON格式返回，不要有任何其他文字：
+{{
+    "tech_stack": "技术栈",
+    "file_structure": {{
+        "root": ["index.html", "styles.css"],
+        "js": ["game.js"],
+        "assets": []
+    }},
+    "main_components": ["组件1", "组件2"],
+    "key_functions": ["函数1", "函数2"]
+}}
+
+游戏信息：
+- 游戏类型: {requirements.get('game_type', '未知')}
+- 核心机制: {', '.join(requirements.get('core_mechanics', []))}
+- 视觉风格: {requirements.get('visual_style', '极简')}
+- 难度: {requirements.get('difficulty', '中等')}
+- 控制方式: {', '.join(requirements.get('controls', []))}
+- 额外功能: {', '.join(requirements.get('features', []))}"""
+
+            response = await llm.ainvoke([
+                SystemMessage(content=prompt),
+                HumanMessage(content="请生成架构设计")
+            ])
+            content = response.content.strip()
+
+            # 提取 JSON 部分
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+
+            architecture = json.loads(content)
 
         state['architecture'] = architecture
         state['logs'].append({
             "step": "architect_designer",
             "status": "completed",
-            "message": f"架构设计完成，技术栈: {result.tech_stack}",
+            "message": f"架构设计完成，技术栈: {architecture.get('tech_stack', '未知')}",
             "timestamp": datetime.now().isoformat()
         })
         state['current_step'] = "code_generation"

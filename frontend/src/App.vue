@@ -5,8 +5,6 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-const currentComponent = ref(null);
 </script>
 
 <style>

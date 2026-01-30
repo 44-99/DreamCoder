@@ -1,18 +1,18 @@
 """
 游戏生成API - 提供游戏生成、SSE流式响应等端点
+支持统一的新建和继续对话接口
 """
-import os
 import json
-from typing import Optional
+
 from datetime import datetime, timezone
-from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from core.dependencies import get_db, logger
-from core.models import User, GameProject, GenerationStep
+from core.models import GameProject, GenerationStep, ChatMessage
 from core.permission import get_current_user
 from workflows.game_gen_workflow import run_game_generation, game_generation_app
 from core.knowledge_base import get_template_db
@@ -23,8 +23,9 @@ router = APIRouter(prefix="/game", tags=["游戏生成"])
 
 # 请求/响应模型
 class GameGenerationRequest(BaseModel):
-    description: str  # 用户描述
-    title: Optional[str] = None  # 项目标题
+    project_id: Optional[int] = None  # 项目ID（如果是None，表示新建项目）
+    message: str  # 用户需求描述
+    title: Optional[str] = None  # 项目标题（仅新建时使用）
 
 
 class GameGenerationResponse(BaseModel):
@@ -42,9 +43,19 @@ class GameProjectResponse(BaseModel):
     deployment_url: Optional[str]
     quality_score: Optional[float]
     created_at: datetime
+    updated_at: datetime
 
 
-# 生成游戏项目
+class ChatMessageResponse(BaseModel):
+    id: int
+    role: str
+    content: str
+    message_type: Optional[str]
+    extra_data: Optional[dict]
+    created_at: datetime
+
+
+# 统一的对话接口 - 支持新建项目和继续对话
 @router.post("/generate", response_model=GameGenerationResponse)
 async def generate_game(
     request: GameGenerationRequest,
@@ -52,46 +63,115 @@ async def generate_game(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """生成游戏项目"""
+    """
+    统一的对话接口：
+    - 如果 project_id 为 None：创建新项目并开始生成
+    - 如果 project_id 存在：在现有项目上继续添加功能
+
+    后端多智能体自动判断：
+    - 如果项目没有代码文件（files 为空或 null）：从零创建游戏
+    - 如果项目已有代码文件：基于现有代码改进/添加功能
+    """
     try:
         user = current_user["user"]
 
-        # 创建项目记录
-        project = GameProject(
-            user_id=user.id,
-            title=request.title or f"游戏项目-{datetime.now().strftime('%m%d_%H%M')}",
-            description=request.description,
-            status="generating"
-        )
-        db.add(project)
-        db.commit()
-        db.refresh(project)
+        # 判断是新建项目还是继续对话
+        is_new_project = request.project_id is None
+        project = None
 
-        # 后台执行生成任务
+        if is_new_project:
+            # 创建新项目
+            project = GameProject(
+                user_id=user.id,
+                title=request.title or f"游戏项目-{datetime.now().strftime('%m%d_%H%M')}",
+                description=request.message,
+                status="generating",
+                files=None  # 新项目没有代码文件
+            )
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+            logger.info(f"创建新项目 {project.id}: {project.title}")
+
+        else:
+            # 继续现有项目
+            project = db.query(GameProject).filter(
+                GameProject.id == request.project_id,
+                GameProject.user_id == user.id
+            ).first()
+
+            if not project:
+                raise HTTPException(status_code=404, detail="项目不存在")
+
+            if project.status != "completed":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"项目当前状态为 {project.status}，请等待完成后再继续"
+                )
+
+            # 更新项目状态和描述
+            project.status = "generating"
+            project.description = f"{project.description}\n\n用户补充需求: {request.message}"
+            project.updated_at = datetime.now(timezone.utc)
+            logger.info(f"继续项目 {project.id}: {project.title}")
+
+        # 保存用户消息到聊天记录
+        user_message = ChatMessage(
+            project_id=project.id,
+            role="user",
+            content=request.message,
+            message_type="text",
+            extra_data={"action": "request"}
+        )
+        db.add(user_message)
+        db.commit()
+
+        # 判断是从零创建还是基于现有代码继续
+        existing_files = project.files if project.files else None
+        is_creating_from_scratch = existing_files is None or len(existing_files) == 0
+
+        # 后台执行生成任务（多智能体自动判断）
         background_tasks.add_task(
             _run_generation_task,
             project_id=project.id,
             user_id=user.id,
-            user_input=request.description,
+            user_input=request.message,
+            existing_files=existing_files,
+            is_creating_from_scratch=is_creating_from_scratch,
             db=db
         )
 
         return GameGenerationResponse(
             project_id=project.id,
             status="generating",
-            message="游戏生成中..."
+            message="创建游戏..." if is_creating_from_scratch else "正在处理您的需求..."
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"游戏生成请求失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def _run_generation_task(project_id: int, user_id: int, user_input: str, db: Session):
-    """后台执行生成任务"""
+async def _run_generation_task(
+    project_id: int,
+    user_id: int,
+    user_input: str,
+    existing_files: Optional[dict] = None,
+    is_creating_from_scratch: bool = True,
+    db: Session = None
+):
+    """
+    后台执行生成任务
+    - is_creating_from_scratch=True: 从零创建新游戏
+    - is_creating_from_scratch=False: 基于现有代码添加功能
+    """
     from starlette.concurrency import run_in_threadpool
 
     start_time = datetime.now()
+    mode = "新建" if is_creating_from_scratch else "改进"
+    logger.info(f"开始{mode}项目 {project_id}，用户输入: {user_input[:100]}...")
 
     try:
         # 执行LangGraph工作流
@@ -103,24 +183,32 @@ async def _run_generation_task(project_id: int, user_id: int, user_input: str, d
             return
 
         # 提取结果
-        requirements = result.get('requirements', {})
-        architecture = result.get('architecture', {})
         generated_files = result.get('generated_files', {})
-        test_results = result.get('test_results', [])
         deployment_url = result.get('deployment_url')
         quality_score = result.get('quality_score')
         error = result.get('error')
 
         # 更新项目信息
-        project.game_type = requirements.get('game_type')
-        project.tech_stack = architecture.get('tech_stack')
-        project.files = generated_files
-        project.deployment_url = deployment_url
-        project.quality_score = quality_score
-        project.status = "completed" if not error else "failed"
-        project.generation_time = (datetime.now() - start_time).total_seconds()
+        if generated_files:
+            project.files = generated_files
+        if deployment_url:
+            project.deployment_url = deployment_url
+        if quality_score is not None:
+            project.quality_score = quality_score
 
-        # 记录生成步骤
+        project.game_type = result.get('requirements', {}).get('game_type') or project.game_type
+        project.tech_stack = result.get('architecture', {}).get('tech_stack') or project.tech_stack
+        project.status = "completed" if not error else "failed"
+
+        # 计算生成时间（累加）
+        if project.generation_time:
+            project.generation_time += (datetime.now() - start_time).total_seconds()
+        else:
+            project.generation_time = (datetime.now() - start_time).total_seconds()
+
+        project.updated_at = datetime.now(timezone.utc)
+
+        # 记录生成步骤到 GenerationStep 表
         logs = result.get('logs', [])
         for log in logs:
             step = GenerationStep(
@@ -128,21 +216,73 @@ async def _run_generation_task(project_id: int, user_id: int, user_input: str, d
                 step_name=log.get('step'),
                 step_type=_map_step_type(log.get('step', '')),
                 status=log.get('status'),
-                input_data={"user_input": user_input},
+                input_data={
+                    "user_input": user_input,
+                    "mode": mode,
+                    "has_existing_files": existing_files is not None
+                },
                 output_data=log,
                 created_at=datetime.fromisoformat(log.get('timestamp', datetime.now().isoformat()))
             )
             db.add(step)
 
-        db.commit()
+            # 同时保存到聊天消息（作为助手消息）
+            assistant_message = ChatMessage(
+                project_id=project_id,
+                role="assistant",
+                content=log.get('message', ''),
+                message_type="log",
+                extra_data={
+                    "step": log.get('step'),
+                    "status": log.get('status'),
+                    "agent_name": log.get('agent_name'),
+                    "tool_name": log.get('tool_name'),
+                    "mode": mode
+                }
+            )
+            db.add(assistant_message)
 
-        logger.info(f"项目 {project_id} 生成完成，耗时: {project.generation_time}秒")
+        # 添加最终完成消息
+        completion_message = f"✅ {mode}完成！"
+        if deployment_url:
+            completion_message += " 游戏已部署，可以在预览中查看。"
+        if quality_score:
+            completion_message += f" 代码质量评分: {quality_score:.1f}/100"
+
+        final_message = ChatMessage(
+            project_id=project_id,
+            role="assistant",
+            content=completion_message,
+            message_type="success",
+            extra_data={
+                "deployment_url": deployment_url,
+                "quality_score": quality_score,
+                "mode": mode
+            }
+        )
+        db.add(final_message)
+
+        db.commit()
+        logger.info(f"项目 {project_id} {mode}完成，耗时: {(datetime.now() - start_time).total_seconds():.1f}秒")
 
     except Exception as e:
-        logger.error(f"生成任务执行失败: {e}")
+        logger.error(f"生成任务执行失败: {e}", exc_info=True)
+
+        # 标记项目失败
         project = db.query(GameProject).filter(GameProject.id == project_id).first()
         if project:
             project.status = "failed"
+            project.updated_at = datetime.now(timezone.utc)
+
+            # 添加错误消息到聊天
+            error_message = ChatMessage(
+                project_id=project_id,
+                role="assistant",
+                content=f"❌ {mode}失败：{str(e)}",
+                message_type="error",
+                extra_data={"error": str(e)}
+            )
+            db.add(error_message)
             db.commit()
 
 
@@ -169,8 +309,7 @@ async def get_projects(
         user = current_user["user"]
         projects = db.query(GameProject).filter(
             GameProject.user_id == user.id
-        ).order_by(GameProject.created_at.desc()).limit(20).all()
-
+        ).order_by(GameProject.created_at.desc()).all()
         return [
             GameProjectResponse(
                 id=p.id,
@@ -180,13 +319,14 @@ async def get_projects(
                 status=p.status,
                 deployment_url=p.deployment_url,
                 quality_score=p.quality_score,
-                created_at=p.created_at
+                created_at=p.created_at,
+                updated_at=p.updated_at
             )
             for p in projects
         ]
 
     except Exception as e:
-        logger.error(f"获取项目列表失败: {e}")
+        logger.error(f"获取项目列表失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -216,7 +356,8 @@ async def get_project(
             status=project.status,
             deployment_url=project.deployment_url,
             quality_score=project.quality_score,
-            created_at=project.created_at
+            created_at=project.created_at,
+            updated_at=project.updated_at
         )
 
     except HTTPException:
@@ -242,17 +383,19 @@ async def get_project_files(
         ).first()
 
         if not project:
+            logger.error(f"项目 {project_id} 不存在或无权访问")
             raise HTTPException(status_code=404, detail="项目不存在")
 
+        files_dict = project.files or {}
         return {
-            "files": project.files or {},
+            "files": files_dict,
             "deployment_url": project.deployment_url
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取项目文件失败: {e}")
+        logger.error(f"获取项目文件失败: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -408,3 +551,84 @@ async def generate_game_stream(
 
 
 game_router = router
+
+
+# 删除项目
+@router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """永久删除项目及其所有相关数据"""
+    try:
+        user = current_user["user"]
+
+        # 检查项目是否存在且属于该用户
+        project = db.query(GameProject).filter(
+            GameProject.id == project_id,
+            GameProject.user_id == user.id
+        ).first()
+
+        if not project:
+            raise HTTPException(status_code=404, detail="项目不存在")
+
+        # 删除项目的聊天消息
+        db.query(ChatMessage).filter(ChatMessage.project_id == project_id).delete()
+
+        # 删除项目的生成步骤日志
+        db.query(GenerationStep).filter(GenerationStep.project_id == project_id).delete()
+
+        # 删除项目
+        db.delete(project)
+        db.commit()
+
+        return {"status": "success", "message": "项目已永久删除"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"删除项目失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/projects/{project_id}/chat", response_model=List[ChatMessageResponse])
+async def get_project_chat(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """获取项目的聊天消息历史"""
+    try:
+        user = current_user["user"]
+        # 验证项目所有权
+        project = db.query(GameProject).filter(
+            GameProject.id == project_id,
+            GameProject.user_id == user.id
+        ).first()
+
+        if not project:
+            logger.error(f"项目 {project_id} 不存在或无权访问")
+            raise HTTPException(status_code=404, detail="项目不存在")
+
+        # 获取聊天消息
+        messages = db.query(ChatMessage).filter(
+            ChatMessage.project_id == project_id
+        ).order_by(ChatMessage.created_at.asc()).all()
+        return [
+            ChatMessageResponse(
+                id=msg.id,
+                role=msg.role,
+                content=msg.content,
+                message_type=msg.message_type,
+                extra_data=msg.extra_data,
+                created_at=msg.created_at
+            )
+            for msg in messages
+        ]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取聊天消息失败: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+

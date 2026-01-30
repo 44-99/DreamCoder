@@ -1,13 +1,19 @@
 # DreamCoder v2.0 配置
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 from pathlib import Path
 
 # Load .env from backend/ directory if present
 _here = Path(__file__).parent.parent
 _env_path = _here / '.env'
 if _env_path.exists():
-    load_dotenv(dotenv_path=_env_path)
+    # 使用 override=True 确保覆盖已存在的环境变量
+    load_dotenv(dotenv_path=_env_path, override=True)
+
+    # 同时直接读取并设置所有环境变量，确保最新值生效
+    env_values = dotenv_values(_env_path)
+    for key, value in env_values.items():
+        os.environ[key] = value
 
 import json
 import logging

@@ -1,113 +1,119 @@
 <template>
-  <div class="account-container">
-    <div class="account-left">
-      <h1 class="account-title">账号管理</h1>
-      <div class="account-avatar" @click="openAvatarPicker" @mouseenter="showAvatarTip = true"
-           @mouseleave="showAvatarTip = false">
-        <img :src="authStore.user?.avatar" alt="用户头像" class="avatar-image-large"/>
-        <div v-if="showAvatarTip" class="avatar-tip">更换头像</div>
-      </div>
-      <button class="change-password-btn" @click="openPasswordModal">
-        <span>更改密码</span>
-      </button>
-    </div>
-    <div class="account-right">
-      <div class="account-info">
-        <div class="info-item" v-for="item in infoItems" :key="item.field">
-          <div class="info-label">
-            <font-awesome-icon :icon="item.icon" class="menu-icon"/>
-            <span>{{ item.label }}</span>
+  <!-- 账号管理弹窗 -->
+  <div class="modal-overlay" v-if="visible" @click.self="closeModal">
+    <div class="account-modal">
+      <div class="account-wrapper">
+        <div class="account-left">
+          <div class="account-avatar" @click="openAvatarPicker" @mouseenter="showAvatarTip = true"
+               @mouseleave="showAvatarTip = false">
+            <img :src="authStore.user?.avatar" alt="用户头像" class="avatar-image-large"/>
+            <div v-if="showAvatarTip" class="avatar-tip">更换头像</div>
           </div>
-          <div class="info-value">
-            <span>{{ user[item.field] }}</span>
-          </div>
-          <button v-if="item.editable" class="edit-btn" @click="openEditModal(item.field)">
-            <font-awesome-icon icon="edit"/>
-            <span>编辑</span>
+          <button class="change-password-btn" @click="openPasswordModal">
+            <span>更改密码</span>
           </button>
         </div>
-      </div>
-    </div>
-    <!-- 编辑信息模态框 -->
-    <div class="modal-overlay" v-if="showEditModal" @click.self="closeEditModal">
-      <div class="edit-modal">
-        <div class="modal-header">
-          <h2>{{ modalTitle }}</h2>
+        <div class="account-right">
+          <div class="account-info">
+            <div class="info-item" v-for="item in infoItems" :key="item.field">
+              <div class="info-label">
+                <font-awesome-icon :icon="item.icon" class="menu-icon"/>
+                <span>{{ item.label }}</span>
+              </div>
+              <div class="info-value">
+                <span>{{ user[item.field] }}</span>
+              </div>
+              <button v-if="item.editable" class="edit-btn" @click="openEditModal(item.field)">
+                <font-awesome-icon icon="edit"/>
+                <span>编辑</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="input-group">
-          <label>{{ fieldLabel }}</label>
-          <input
-              type="text"
-              class="input-field"
-              v-model="editValue"
-              :placeholder="`请输入${fieldLabel}`"
-          >
-          <div class="verification-code-group" v-if="currentField === 'phone' || currentField === 'email'">
+      </div>
+      
+      <!-- 编辑信息模态框 -->
+      <div class="modal-overlay" v-if="showEditModal" @click.self="closeEditModal">
+        <div class="edit-modal">
+          <div class="modal-header">
+            <h2>{{ modalTitle }}</h2>
+          </div>
+          <div class="input-group">
+            <label>{{ fieldLabel }}</label>
             <input
                 type="text"
                 class="input-field"
-                v-model="verificationCode"
-                placeholder="请输入验证码"
+                v-model="editValue"
+                :placeholder="`请输入${fieldLabel}`"
             >
-            <button
-                class="send-code-btn"
-                @click="sendVerificationCode"
-                :disabled="isSendingCode"
-            >
-              {{ isSendingCode ? `${countdown}秒后重试` : '发送验证码' }}
+            <div class="verification-code-group" v-if="currentField === 'phone' || currentField === 'email'">
+              <input
+                  type="text"
+                  class="input-field"
+                  v-model="verificationCode"
+                  placeholder="请输入验证码"
+              >
+              <button
+                  class="send-code-btn"
+                  @click="sendVerificationCode"
+                  :disabled="isSendingCode"
+              >
+                {{ isSendingCode ? `${countdown}秒后重试` : '发送验证码' }}
+              </button>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="submit-btn" @click="submitEdit">
+              <font-awesome-icon icon="check"/>
+              <span>提交</span>
             </button>
           </div>
         </div>
-        <div class="modal-actions">
-          <button class="submit-btn" @click="submitEdit">
-            <font-awesome-icon icon="check"/>
-            <span>提交</span>
-          </button>
-        </div>
       </div>
-    </div>
-    <!-- 更改密码模态框 -->
-    <div class="modal-overlay" v-if="showPasswordModal" @click.self="closePasswordModal">
-      <div class="edit-modal">
-        <div class="modal-header">
-          <h2>更改密码</h2>
-        </div>
-        <div class="input-group">
-          <label>当前密码</label>
-          <input
-              type="password"
-              class="input-field"
-              v-model="currentPassword"
-              placeholder="请输入当前密码"
-          >
-        </div>
-        <div class="input-group">
-          <label>新密码</label>
-          <input
-              type="password"
-              class="input-field"
-              v-model="newPassword"
-              placeholder="请输入新密码"
-          >
-        </div>
-        <div class="input-group">
-          <label>确认新密码</label>
-          <input
-              type="password"
-              class="input-field"
-              v-model="confirmPassword"
-              placeholder="请再次输入新密码"
-          >
-        </div>
-        <div class="modal-actions">
-          <button class="action-btn" @click="closePasswordModal">
-            <font-awesome-icon icon="times"/>
-            <span>取消</span>
-          </button>
-          <button class="submit-btn" @click="submitPassword">
-            <font-awesome-icon icon="check"/>
-            <span>提交</span>
-          </button>
+      
+      <!-- 更改密码模态框 -->
+      <div class="modal-overlay" v-if="showPasswordModal" @click.self="closePasswordModal">
+        <div class="edit-modal">
+          <div class="modal-header">
+            <h2>更改密码</h2>
+          </div>
+          <div class="input-group">
+            <label>当前密码</label>
+            <input
+                type="password"
+                class="input-field"
+                v-model="currentPassword"
+                placeholder="请输入当前密码"
+            >
+          </div>
+          <div class="input-group">
+            <label>新密码</label>
+            <input
+                type="password"
+                class="input-field"
+                v-model="newPassword"
+                placeholder="请输入新密码"
+            >
+          </div>
+          <div class="input-group">
+            <label>确认新密码</label>
+            <input
+                type="password"
+                class="input-field"
+                v-model="confirmPassword"
+                placeholder="请再次输入新密码"
+            >
+          </div>
+          <div class="modal-actions">
+            <button class="action-btn" @click="closePasswordModal">
+              <font-awesome-icon icon="times"/>
+              <span>取消</span>
+            </button>
+            <button class="submit-btn" @click="submitPassword">
+              <font-awesome-icon icon="check"/>
+              <span>提交</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -115,29 +121,32 @@
 </template>
 
 <script setup>
-import {computed, ref} from 'vue';
+import {computed, ref, defineProps, defineEmits} from 'vue';
 import {useAuthStore} from '@/stores/authStore';
 import apiClient from '@/utils/axios';
 import {showError, showInfo, showSuccess} from '@/utils/toast.js';
 import {
-  faBullhorn,
-  faCalendarAlt,
-  faChartBar,
-  faChartLine,
-  faCheck,
-  faCheckCircle,
-  faEdit,
-  faEnvelope,
-  faIndustry,
-  faPhone,
-  faTags,
   faUser,
-  faUserCog,
-  faUserTag
+  faPhone,
+  faEnvelope,
+  faCheck,
+  faEdit,
+  faTimes
 } from '@fortawesome/free-solid-svg-icons';
 import {library} from "@fortawesome/fontawesome-svg-core";
 
-library.add(faUser, faIndustry, faUserTag, faPhone, faEnvelope, faBullhorn, faCalendarAlt, faChartBar, faChartLine, faCheckCircle, faTags, faUserCog, faCheck, faEdit);
+library.add(faUser, faPhone, faEnvelope, faCheck, faEdit, faTimes);
+
+// Props和Emits定义
+const props = defineProps({
+  visible: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const emit = defineEmits(['update:visible']);
+
 const infoItems = [
   {field: 'username', label: '用户名', icon: faUser, editable: true},
   {field: 'phone', label: '电话', icon: faPhone, editable: true},
@@ -146,13 +155,21 @@ const infoItems = [
 
 const authStore = useAuthStore();
 // 账号信息相关
-const user = ref({
-  username: authStore.user?.username || '未设置',
-  phone: authStore.user?.phone || '未设置',
-  email: authStore.user?.email || '未设置',
-  avatar: authStore.user?.avatar || '/default-avatar.jpg'
+// 使用计算属性确保数据响应式更新
+const user = computed(() => {
+  const userData = authStore.user || {};
+  return {
+    username: userData.username || '未设置',
+    phone: userData.phone || '未设置',
+    email: userData.email || '未设置',
+    avatar: userData.avatar || '/default-avatar.jpg'
+  };
 });
 
+// 关闭弹窗
+const closeModal = () => {
+  emit('update:visible', false);
+};
 
 // 打开头像选择器
 const openAvatarPicker = () => {
@@ -359,57 +376,96 @@ const submitPassword = async () => {
 </script>
 
 <style scoped>
-.dashboard {
-  padding: 3rem;
-  min-height: 100%;
+/* 主弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  flex-direction: column;
-  animation: gradientFlow 8s ease infinite;
-  position: relative;
-  overflow: hidden;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.account-container {
+.account-modal {
+  background: rgba(30, 30, 40, 0.95);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  height: 60%;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.account-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(71, 118, 230, 0.25) 0%, rgba(142, 84, 233, 0.18) 100%);
+}
+
+.account-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(71, 118, 230, 0.5);
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.close-modal-btn:hover {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.account-wrapper {
   display: flex;
   flex-direction: row;
-  width: 100%;
-  min-height: 100vh;
-  background: rgba(30, 30, 40, 0.85);
-  border-radius: 0;
-  box-shadow: none;
-  padding: 0;
-  margin: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 .account-left {
-  flex: 0 0 380px;
+  flex: 0 0 300px;
   background: linear-gradient(135deg, rgba(71, 118, 230, 0.25) 0%, rgba(142, 84, 233, 0.18) 100%),
   rgba(40, 50, 80, 0.55);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(12px);
   border-right: 2px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 10% 0 18% 0;
-  width: auto;
-  height: 100vh;
-  position: relative;
+  justify-content: center;
+  padding: 2rem;
+  gap: 2rem;
 }
 
 .account-avatar {
-  width: 180px;
-  height: 180px;
+  width: 150px;
+  height: 150px;
   background: linear-gradient(135deg, #4776E6, #8E54E9);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 32px rgba(71, 118, 230, 0.5);
-  margin-bottom: 32px;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -477,30 +533,21 @@ const submitPassword = async () => {
   transform: translateX(-50%) translateY(0);
 }
 
-.account-title {
-  font-size: 2.8rem;
-  color: #fff;
-  font-weight: 700;
-  text-align: center;
-  text-shadow: 0 0 12px rgba(71, 118, 230, 0.5);
-}
-
 .change-password-btn {
   width: 80%;
-  padding: 1.1rem;
+  padding: 0.8rem;
   background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.3));
   color: #e74c3c;
   border: 1px solid rgba(231, 76, 60, 0.4);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 500;
   transition: all 0.3s ease;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 0;
+  gap: 8px;
 }
 
 .account-right {
@@ -509,16 +556,13 @@ const submitPassword = async () => {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  padding: 0 48px;
-  height: 100%;
-  background: transparent;
+  padding: 2rem;
+  overflow-y: auto;
 }
 
 .account-info {
   width: 100%;
-  max-width: 600px;
-  margin: 10% auto;
-
+  max-width: 500px;
 }
 
 .info-item {
@@ -559,15 +603,13 @@ const submitPassword = async () => {
   border: 1px solid rgba(71, 118, 230, 0.4);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 120px;
-  max-width: 160px;
-  margin-left: auto;
+  min-width: 100px;
 }
 
 .edit-btn:hover {
@@ -576,26 +618,7 @@ const submitPassword = async () => {
   box-shadow: 0 5px 15px rgba(71, 118, 230, 0.3);
 }
 
-.edit-btn i {
-  font-size: 1rem;
-}
-
 /* 编辑模态框样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
 .edit-modal {
   background: linear-gradient(135deg, #1e3c72, #2a5298);
   border-radius: 16px;
@@ -608,64 +631,17 @@ const submitPassword = async () => {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.edit-modal::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  z-index: -1;
-}
-
-.modal-header {
+.edit-modal .modal-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: center;
   align-items: center;
-  position: relative;
-}
-
-.close-modal-btn {
   background: transparent;
-  border: none;
-  color: #e74c3c;
-  font-size: 1.2rem;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-  padding: 0.3rem;
-  position: relative;
-  width: 20px;
-  height: 20px;
 }
 
-.close-modal-btn::before,
-.close-modal-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 2px;
-  background-color: #e74c3c;
-}
-
-.close-modal-btn::before {
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-.close-modal-btn::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
-}
-
-.close-modal-btn:hover {
-  opacity: 0.8;
-}
-
-.modal-header h2 {
+.edit-modal .modal-header h2 {
   font-size: 1.8rem;
   color: #fff;
   text-align: center;
@@ -708,6 +684,9 @@ const submitPassword = async () => {
 
 .submit-btn {
   padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, #4776E6, #8E54E9);
+  color: white;
+  border: none;
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
@@ -715,6 +694,12 @@ const submitPassword = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 4px 15px rgba(71, 118, 230, 0.4);
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(71, 118, 230, 0.6);
 }
 
 .action-btn {
@@ -726,177 +711,45 @@ const submitPassword = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.submit-btn {
-  background: linear-gradient(135deg, #4776E6, #8E54E9);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
-  border: none;
-  box-shadow: 0 4px 15px rgba(71, 118, 230, 0.4);
-}
-
-.submit-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 7px 20px rgba(71, 118, 230, 0.6);
-}
-
-.notification i {
-  font-size: 1.5rem;
-}
-
-.notification.success i {
-  color: #2ecc71;
-}
-
-.notification.error i {
-  color: #e74c3c;
-}
-
-/* 深色主题只改变颜色，不改变布局 */
-.dark-theme .account-container {
-  background: rgba(18, 18, 18, 0.95);
-}
-
-.dark-theme .account-left {
-  background: linear-gradient(135deg, rgba(71, 118, 230, 0.12) 0%, rgba(142, 84, 233, 0.10) 100%), rgba(40, 50, 80, 0.55);
-  border-right: 2px solid rgba(255, 255, 255, 0.08);
-}
-
-.dark-theme .account-title {
-  color: #bb86fc;
-  text-shadow: 0 0 12px rgba(187, 134, 252, 0.2);
-}
-
-.dark-theme .account-avatar {
-  background: linear-gradient(135deg, #3700b3, #8E54E9);
-  box-shadow: 0 0 32px rgba(98, 0, 234, 0.3);
-}
-
-.dark-theme .change-password-btn {
-  background: linear-gradient(135deg, rgba(98, 0, 234, 0.15), rgba(55, 0, 179, 0.18));
-  color: #bb86fc;
-  border: 1px solid rgba(98, 0, 234, 0.2);
-}
-
-.dark-theme .account-right {
-  background: transparent;
-}
-
-.dark-theme .info-label {
-  color: #bb86fc;
-}
-
-.dark-theme .info-value {
-  color: #e0e0e0;
-}
-
-.dark-theme .edit-btn {
-  background: rgba(98, 0, 234, 0.15);
-  color: #bb86fc;
-  border: 1px solid rgba(98, 0, 234, 0.2);
-}
-
-.dark-theme .edit-btn:hover {
-  background: rgba(98, 0, 234, 0.25);
-}
-
-.dark-theme .modal-overlay {
-  background: rgba(18, 18, 18, 0.85);
-}
-
-.dark-theme .edit-modal {
-  background: linear-gradient(135deg, #232323, #2a2a2a);
-  border: 1px solid rgba(187, 134, 252, 0.08);
-}
-
-.dark-theme .modal-header h2 {
-  color: #bb86fc;
-}
-
-.dark-theme .input-group label {
-  color: #bb86fc;
-}
-
-.dark-theme .input-field {
-  background: rgba(30, 30, 40, 0.7);
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
-.dark-theme .input-field:focus {
-  border-color: #bb86fc;
-  box-shadow: 0 0 0 3px rgba(187, 134, 252, 0.2);
-}
-
-.dark-theme .submit-btn {
-  background: linear-gradient(135deg, #3700b3, #8E54E9);
-  color: #fff;
-}
-
-.dark-theme .submit-btn:hover {
-  background: linear-gradient(135deg, #6200ea, #bb86fc);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* 响应式设计 */
-@media (max-width: 900px) {
-  .account-container {
+@media (max-width: 768px) {
+  .account-modal {
+    width: 95%;
+    max-width: 95%;
+  }
+  
+  .account-wrapper {
     flex-direction: column;
     height: auto;
-    min-height: 100vh;
+    max-height: 80vh;
   }
-
+  
   .account-left {
-    background: linear-gradient(135deg, rgba(71, 118, 230, 0.18) 0%, rgba(142, 84, 233, 0.12) 100%), rgba(40, 50, 80, 0.45);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    flex: none;
     border-right: none;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.10);
-    box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.12);
-    /* 其他样式不变 */
+    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    padding: 1.5rem;
   }
-
-  .account-right {
-    padding: 0 16px;
-    align-items: center;
-  }
-
-  .account-info {
-    max-width: 100%;
-  }
-}
-
-@media (max-width: 600px) {
-  .account-left {
-    background: linear-gradient(135deg, rgba(71, 118, 230, 0.12) 0%, rgba(142, 84, 233, 0.08) 100%), rgba(40, 50, 80, 0.35);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.08);
-  }
-
+  
   .account-avatar {
     width: 100px;
     height: 100px;
   }
-
-  .account-title {
-    font-size: 2rem;
-  }
-
-  .change-password-btn {
-    font-size: 1rem;
-    padding: 0.8rem;
-  }
-
+  
   .account-right {
-    padding: 0 4px;
+    padding: 1.5rem;
   }
-
+  
   .info-item {
     grid-template-columns: 1fr;
     gap: 8px;
   }
-
+  
   .edit-btn {
     width: 100%;
     max-width: none;

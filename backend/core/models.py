@@ -34,7 +34,7 @@ class GameProject(Base):
     langsmith_run_id = Column(String(100))
     metadata_ = Column('metadata', JSON)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
 
 # 游戏生成步骤日志
@@ -69,4 +69,16 @@ class GameTemplate(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc))
+
+
+# 会话消息表 - 用于多轮对话
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('game_projects.id'), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # 'user' or 'assistant'
+    content = Column(Text, nullable=False)
+    message_type = Column(String(50))  # 'text', 'log', 'error', 'success', 'code_update'
+    extra_data = Column(JSON)  # 额外信息，如agent_name, tool_name等
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 

@@ -25,7 +25,6 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
             console.warn('initAuth: 下一帧触发计算失败', e);
         }
-        await router.push('/');
     }
 
     // 更新头像
@@ -96,7 +95,6 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         delete apiClient.defaults.headers.common['Authorization'];
-        await router.push('/login');
     }
 
     return {

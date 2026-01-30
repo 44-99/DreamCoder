@@ -53,7 +53,7 @@ def login(username: str = Body(..., description="用户名或ID"), password: str
     token_data = {"id": user.id}
     access_token = create_access_token(data=token_data,
                                        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"status": "success", "token": access_token,
+    return {"status": "success", "access_token": access_token,
             "user": {"id": user.id, "username": user.username, "phone": user.phone, "email": user.email, "avatar": user.avatar}}
 
 
@@ -118,7 +118,7 @@ def register(
         token_data = {"id": new_user.id}
         access_token = create_access_token(data=token_data, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
         return {
-            "token": access_token,
+            "access_token": access_token,
             "user": {
                 "id": new_user.id,
                 "username": new_user.username,

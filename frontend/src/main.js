@@ -4,22 +4,22 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faHome, faBell, faCog, faUser, faSignOutAlt, faSlidersH } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { createApp } from 'vue'
-import { createPinia } from 'pinia' // 导入 Pinia
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
 
 const app = createApp(App)
-library.add(faHome, faBell, faCog, faUser, faSignOutAlt, faSlidersH);
 
-// 全局注册 FontAwesomeIcon 组件
+// 注册 FontAwesome
+library.add(faHome, faBell, faCog, faUser, faSignOutAlt, faSlidersH);
 app.component('font-awesome-icon', FontAwesomeIcon);
 
-// 先安装 Pinia
+// 安装 Pinia
 export const pinia = createPinia()
 app.use(pinia)
 
-// 再启用路由
+// 启用路由
 app.use(router)
 
 app.mount('#app')
