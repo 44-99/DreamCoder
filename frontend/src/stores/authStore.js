@@ -25,7 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
         } catch (e) {
             console.warn('initAuth: 下一帧触发计算失败', e);
         }
-        await router.push('/overview');
+        await router.push('/');
     }
 
     // 更新头像

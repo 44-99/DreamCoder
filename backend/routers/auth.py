@@ -153,33 +153,42 @@ def send_sms(phone: str, code: str):
 
 
 def send_email(to_email: str, code: str):
-    smtp_server = "smtp.qq.com"  # QQ 邮箱 SMTP 服务器
-    smtp_port = 465
-    sender = "chensy_1213@qq.com"  # 你的 QQ 邮箱
-    email_password = "mvcwzcssqkpjeabb"  # 替换为 QQ 邮箱生成的授权码
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.qq.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "465"))
+    sender = os.getenv("SMTP_SENDER", "")
+    email_password = os.getenv("SMTP_PASSWORD", "")
 
     subject = "验证码通知"
-    content = f"您的Multi-Agent账号验证码是：{code}，有效期5分钟。"
+    content = f"您的DreamCoder账号验证码是：{code}，有效期5分钟。"
     message = MIMEText(content, "plain", "utf-8")
 
     # 修正头部格式 - 使用标准格式
-    message["From"] = formataddr(("多智能体协作任务系统", sender))
+    message["From"] = formataddr(("DreamCoder（多智能体代码生成系统）", sender))
     message["To"] = to_email
     message["Subject"] = Header(subject, "utf-8")
     message["Message-ID"] = f"<{uuid.uuid4()}@{smtp_server.split('.')[0]}>"
     message["Date"] = formatdate(localtime=True)
     try:
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        # 添加超时和调试日志
+        logger.info(f"尝试连接 SMTP: {smtp_server}:{smtp_port}")
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+        logger.info(f"SMTP 连接成功，尝试登录...")
         server.login(sender, email_password)
+        logger.info(f"SMTP 登录成功，发送邮件至 {to_email}...")
         server.sendmail(sender, [to_email], message.as_string())
-        server.quit()
         logger.info(f"邮件已发送至 {to_email}")
+        server.quit()
         return True
     except smtplib.SMTPAuthenticationError as e:
         logger.error(f"邮件发送失败: SMTP 认证失败 - {e}")
+        logger.error(f"请检查: 1) 授权码是否正确 2) QQ邮箱是否开启SMTP服务 3) 授权码是否已过期")
         raise HTTPException(status_code=500, detail="SMTP 认证失败，请检查邮箱授权码")
+    except smtplib.SMTPServerDisconnected as e:
+        logger.error(f"邮件发送失败: SMTP 连接断开 - {e}")
+        logger.error(f"可能原因: 1) 网络问题 2) 防火墙阻止 3) QQ邮箱SMTP服务异常")
+        raise HTTPException(status_code=500, detail="SMTP 连接失败，请检查网络或防火墙设置")
     except Exception as e:
-        logger.error(f"邮件发送失败: {e}")
+        logger.error(f"邮件发送失败: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail="邮件发送失败")
 
 
