@@ -5,6 +5,7 @@
 
 
 import os
+import re
 from functools import lru_cache
 from typing import TypedDict, List, Dict, Any, Optional
 from datetime import datetime
@@ -134,6 +135,86 @@ def supports_structured_output():
     return provider not in unsupported_providers
 
 
+def _response_text(response: Any) -> str:
+    """Normalize text returned by OpenAI-compatible chat providers."""
+    content = response.content
+    if isinstance(content, str):
+        text = content.strip()
+    elif isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                parts.append(block["text"])
+        text = "\n".join(parts).strip()
+    else:
+        text = ""
+
+    if not text:
+        raise ValueError("模型返回了空文本响应")
+    return text
+
+
+def _parse_json_object(content: str, required_keys: set[str]) -> Dict[str, Any]:
+    """Extract a JSON object even when a provider adds reasoning or prose."""
+    decoder = json.JSONDecoder()
+    missing_keys: set[str] = set()
+
+    for index, character in enumerate(content):
+        if character != "{":
+            continue
+        try:
+            value, _ = decoder.raw_decode(content[index:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(value, dict):
+            continue
+
+        missing_keys = required_keys.difference(value)
+        if not missing_keys:
+            return value
+
+    if missing_keys:
+        missing = ", ".join(sorted(missing_keys))
+        raise ValueError(f"模型 JSON 缺少必需字段: {missing}")
+    raise ValueError("模型响应中未找到有效 JSON 对象")
+
+
+def _parse_generated_files(content: str) -> Dict[str, str]:
+    """Accept the documented JSON contract or a self-contained HTML response."""
+    json_error: Optional[ValueError] = None
+    try:
+        value = _parse_json_object(content, {"files"})
+        files = value["files"]
+        if not isinstance(files, dict) or not all(
+            isinstance(path, str) and isinstance(file_content, str)
+            for path, file_content in files.items()
+        ):
+            raise ValueError("模型 JSON 的 files 必须是文本文件映射")
+        return files
+    except ValueError as exc:
+        json_error = exc
+
+    fenced = re.search(r"```(?:html)?\s*(.*?)```", content, re.IGNORECASE | re.DOTALL)
+    candidates = [fenced.group(1)] if fenced else []
+    candidates.append(content)
+
+    for candidate in candidates:
+        lower = candidate.lower()
+        starts = [position for position in (lower.find("<!doctype html"), lower.find("<html")) if position >= 0]
+        if not starts:
+            continue
+        start = min(starts)
+        closing = lower.rfind("</html>")
+        end = closing + len("</html>") if closing >= start else len(candidate)
+        html = candidate[start:end].strip()
+        if html:
+            return {"index.html": html}
+
+    raise json_error
+
+
 # 1. 需求分析节点
 async def requirement_analyzer_node(state: GameState) -> GameState:
     """分析用户需求，提取游戏规格"""
@@ -193,19 +274,54 @@ async def requirement_analyzer_node(state: GameState) -> GameState:
 
             messages = [
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=state['user_input'])
+                HumanMessage(content=f"""
+                只分析下面的用户需求，不要生成 HTML、CSS 或 JavaScript。
+                必须只返回 system message 指定字段组成的 JSON 对象。
+
+                用户需求：
+                {state['user_input']}
+                """)
             ]
 
             response = await llm.ainvoke(messages)
-            content = response.content.strip()
+            content = _response_text(response)
+            try:
+                requirements = _parse_json_object(
+                    content,
+                    {
+                        "game_type",
+                        "core_mechanics",
+                        "visual_style",
+                        "difficulty",
+                        "controls",
+                        "features",
+                    },
+                )
+            except ValueError as parse_error:
+                try:
+                    generated_files = _parse_generated_files(content)
+                except ValueError:
+                    raise parse_error
 
-            # 提取 JSON 部分
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-
-            requirements = json.loads(content)
+                requirements = {
+                    "game_type": "HTML5 游戏",
+                    "core_mechanics": [state['user_input']],
+                    "visual_style": "按用户描述",
+                    "difficulty": "中等",
+                    "controls": [],
+                    "features": [],
+                }
+                state['requirements'] = requirements
+                state['game_type'] = requirements['game_type']
+                state['generated_files'] = generated_files
+                state['logs'].append({
+                    "step": "requirement_analyzer",
+                    "status": "completed",
+                    "message": "模型提前返回完整 HTML，已直接进入产物验证",
+                    "timestamp": datetime.now().isoformat(),
+                })
+                state['current_step'] = "testing"
+                return state
 
         state['requirements'] = requirements
         state['game_type'] = requirements.get('game_type', '未知')
@@ -301,15 +417,15 @@ async def architect_designer_node(state: GameState) -> GameState:
                 SystemMessage(content=prompt),
                 HumanMessage(content="请生成架构设计")
             ])
-            content = response.content.strip()
-
-            # 提取 JSON 部分
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
-
-            architecture = json.loads(content)
+            architecture = _parse_json_object(
+                _response_text(response),
+                {
+                    "tech_stack",
+                    "file_structure",
+                    "main_components",
+                    "key_functions",
+                },
+            )
 
         state['architecture'] = architecture
         state['logs'].append({
@@ -386,18 +502,12 @@ async def code_generator_node(state: GameState) -> GameState:
         ]
 
         response = await llm.ainvoke(messages)
-        content = response.content
+        content = _response_text(response)
 
         # 解析生成的文件
         # 简单处理：期望返回JSON格式的files字段
         try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
-
-            files_data = json.loads(content.strip())
-            generated_files = files_data.get('files', {})
+            generated_files = _parse_generated_files(content)
 
             # 确保至少有index.html
             if 'index.html' not in generated_files:
@@ -415,7 +525,7 @@ async def code_generator_node(state: GameState) -> GameState:
             logger.info(f"代码生成完成，文件数: {len(generated_files)}")
             return state
 
-        except json.JSONDecodeError as e:
+        except ValueError as e:
             # 如果JSON解析失败，尝试生成基础代码
             logger.warning(f"JSON解析失败，使用基础代码生成: {e}")
 
@@ -800,6 +910,18 @@ async def deployment_node(state: GameState) -> GameState:
         return state
 
 
+def _route_after_step(state: GameState) -> str:
+    return "stop" if state.get("error") else "continue"
+
+
+def _route_after_requirement(state: GameState) -> str:
+    if state.get("error"):
+        return "stop"
+    if state.get("generated_files"):
+        return "test"
+    return "continue"
+
+
 # 创建工作流图
 def create_game_generation_workflow():
     """创建游戏生成工作流"""
@@ -815,11 +937,27 @@ def create_game_generation_workflow():
     # 设置入口
     workflow.set_entry_point("requirement_analyzer")
 
-    # 添加边（线性流程）
-    workflow.add_edge("requirement_analyzer", "architect_designer")
-    workflow.add_edge("architect_designer", "code_generator")
-    workflow.add_edge("code_generator", "test_validator")
-    workflow.add_edge("test_validator", "deployment")
+    # Stop immediately after a failed node instead of cascading secondary errors.
+    workflow.add_conditional_edges(
+        "requirement_analyzer",
+        _route_after_requirement,
+        {"continue": "architect_designer", "test": "test_validator", "stop": END},
+    )
+    workflow.add_conditional_edges(
+        "architect_designer",
+        _route_after_step,
+        {"continue": "code_generator", "stop": END},
+    )
+    workflow.add_conditional_edges(
+        "code_generator",
+        _route_after_step,
+        {"continue": "test_validator", "stop": END},
+    )
+    workflow.add_conditional_edges(
+        "test_validator",
+        _route_after_step,
+        {"continue": "deployment", "stop": END},
+    )
     workflow.add_edge("deployment", END)
 
     # 添加检查点（用于恢复和追踪）

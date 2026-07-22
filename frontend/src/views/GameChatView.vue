@@ -564,6 +564,7 @@ import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import apiClient from '@/utils/axios';
+import { reconcileSelectedFile } from '@/utils/generatedFiles';
 import { generatePreviewHTML } from '@/utils/htmlGenerator';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import {
@@ -740,10 +741,11 @@ const loadGeneratedFiles = async () => {
     // 自动检测游戏类型
     detectGameType();
 
-    // 自动选择第一个文件
-    if (generatedFiles.value.length > 0 && !selectedFile.value) {
-      selectedFile.value = generatedFiles.value[0];
-    }
+    // 保留当前文件路径，同时替换为本次请求返回的最新文件对象。
+    selectedFile.value = reconcileSelectedFile(
+      generatedFiles.value,
+      selectedFile.value
+    );
   } catch (error) {
     console.error('加载文件错误:', error);
     generatedFiles.value = [];
