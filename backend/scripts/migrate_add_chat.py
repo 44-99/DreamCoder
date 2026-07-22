@@ -10,8 +10,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from sqlalchemy import text
-from core.dependencies import engine, logger
+from sqlalchemy import text  # noqa: E402
+from core.dependencies import engine, logger  # noqa: E402
 
 
 def migrate_add_chat_messages():

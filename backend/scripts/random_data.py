@@ -116,7 +116,6 @@ def main(start_year: int = 2020, end_year: int = 2025, seed: int = None, dry_run
             flds = db.query(FieldData).filter_by(category=cat_id, is_active=True).all()
             # determine which field name_en exist as JSON columns on model
             # build a normalized column lookup to allow tolerant matching
-            cols = {c.name for c in model.__table__.columns}
             monthly_cols = {c.name for c in model.__table__.columns if isinstance(c.type, JSON) or 'json' in str(c.type).lower()}
 
             def _norm(x: str) -> str:

@@ -55,6 +55,7 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       AUTH_DELIVERY_MODE: ${AUTH_DELIVERY_MODE:-console}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 1440
       OPENAI_API_KEY: ${OPENAI_API_KEY}

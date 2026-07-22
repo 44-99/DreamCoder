@@ -2,11 +2,9 @@
 MCP工具管理模块 - 管理MCP服务器连接和工具调用
 支持文件系统、终端、浏览器等MCP服务器
 """
-import os
 import asyncio
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-import json
 
 from core.dependencies import logger
 

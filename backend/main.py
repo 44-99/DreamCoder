@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -20,8 +21,21 @@ if sys.platform.startswith("win"):
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="DreamCoder", description="基于LangGraph的游戏生成系统", version="2.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"],
-                   allow_headers=["*"], )
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials="*" not in allowed_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory=str(BACKEND_DIR / "static")), name="static")
 
 

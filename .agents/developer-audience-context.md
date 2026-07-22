@@ -69,9 +69,9 @@ Last updated: 2026-07-23
 
 ## Technical Trust Signals
 
-- 必需：可复制的 quickstart、演示 GIF/视频、CI、自动测试、明确支持的模型、MIT 许可证。
-- 必需：公开限制、安全说明、架构图、变更日志和版本化 release。
-- 当前基线（2026-07-23）：GitHub 1 star、0 fork、无 topics、无 homepage、无公开 Issue；不能用采用量作为主要信任信号。
+- 已有：可复制的 quickstart、CI、自动测试、三款离线示例、MIT 许可证、公开限制、安全说明、架构图、贡献指南、GitHub Description/Website/Topics。
+- 发布前仍需：一次真实 provider 的“生成 + 继续修改”演示、版本化 `v0.1.0` release。
+- 当前基线（2026-07-23）：GitHub 1 star、0 fork、尚无公开 Release；不能用采用量作为主要信任信号。
 - 近期最有价值的证明：10 分钟内首次生成成功、示例项目、测试通过、真实问题复盘。
 
 ## Conversion Actions

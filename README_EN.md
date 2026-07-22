@@ -8,113 +8,61 @@
   <p><strong>Generate, iterate on, and preview playable web games with natural language.</strong></p>
   <p>An open-source, self-hosted reference project for AI application developers and learners.</p>
 
+  [![CI](https://github.com/44-99/DreamCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/44-99/DreamCoder/actions/workflows/ci.yml)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
   [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg?logo=vue.js&logoColor=white)](https://vuejs.org/)
 </div>
 
-## What is DreamCoder?
+![DreamCoder playable example gallery](./docs/assets/examples-gallery.png)
 
-DreamCoder demonstrates how a complete LLM application can turn natural-language requirements into playable HTML/CSS/JavaScript games while maintaining projects, conversations, generated files, and follow-up changes.
+> These three offline games are curated, deterministic examples for product-shape and visual QA. They do not claim a fixed output quality for any model.
 
-It is designed for:
+## What problem does it solve?
 
-- developers learning FastAPI, Vue, LangGraph, and LLM application engineering;
-- students and technical authors studying the full requirements-to-preview workflow;
-- indie developers and hackathon teams prototyping small browser games.
+Many LLM tutorials stop at a single prompt and response. DreamCoder demonstrates a fuller engineering loop:
 
-DreamCoder is not yet a production-grade general AI IDE or a managed SaaS for non-technical creators.
+**Describe → generate files through a workflow → validate → preview → iterate on existing files**
 
-## Why explore it?
+It is for developers, students, and technical authors exploring FastAPI, Vue 3, LangGraph, structured generation, and generative UI. It is not yet a production-grade general AI IDE or a managed SaaS for non-technical creators.
 
-- **Playable output** — inspect the source and run the generated game in the browser.
-- **Real continuation** — existing files are passed into follow-up generations.
-- **Testable lifecycle** — project state, transactions, logs, and failure completion live in one generation run module.
-- **Lightweight local setup** — SQLite and an in-process verification store are the defaults.
-- **Upgradeable infrastructure** — hosted deployments can opt into PostgreSQL, Redis, ChromaDB, and external verification delivery.
+## Core capabilities
 
-## Architecture
-
-```mermaid
-flowchart LR
-    U["Game description"] --> V["Vue workspace"]
-    V --> A["FastAPI route adapter"]
-    A --> R["Generation Run module"]
-    R --> W["LangGraph workflow"]
-    W --> L["LLM provider"]
-    W --> F["Generated files"]
-    R --> D[("SQLite by default")]
-    F --> P["Source view and browser preview"]
-    D -. hosted .-> PG[("PostgreSQL")]
-    R -. optional .-> RD[("Redis")]
-```
+- **Playable output** — inspect generated HTML/CSS/JavaScript and run it in the browser.
+- **Real iteration** — follow-up requests receive the project's existing files.
+- **Testable lifecycle** — the Generation Run module owns state, transactions, step logs, and failure completion.
+- **Local-first defaults** — SQLite and an in-process verification store work without Docker, PostgreSQL, or Redis.
+- **Untrusted-output handling** — path, file count, entry file, CSP, and iframe sandbox rules protect the preview boundary.
 
 ## Ten-minute quickstart
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 20.19+ or 22.12+
-- one OpenAI, DeepSeek, or Qwen API key
-
-Docker, PostgreSQL, Redis, and ChromaDB are not required for local development.
-
-### 1. Clone and configure a model
+You need Python 3.11+, Node.js 20.19+ or 22.12+, and one DeepSeek, OpenAI, or Qwen API key.
 
 ```bash
 git clone https://github.com/44-99/DreamCoder.git
 cd DreamCoder
+cp backend/.env.example backend/.env  # PowerShell: Copy-Item backend/.env.example backend/.env
 ```
 
-macOS / Linux:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-Windows PowerShell:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
-
-Edit `backend/.env`. The example defaults to DeepSeek:
+Edit `backend/.env` and provide the key for your selected provider. The example defaults to DeepSeek:
 
 ```env
 LLM_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your-key
 ```
 
-### 2. Start the backend
-
-macOS / Linux:
+Terminal 1:
 
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate
+# macOS/Linux: source .venv/bin/activate
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Windows PowerShell:
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-
-The backend exposes:
-
-- health check: <http://localhost:8000/>
-- OpenAPI docs: <http://localhost:8000/docs>
-
-### 3. Start the frontend
-
-Open a second terminal:
+Terminal 2:
 
 ```bash
 cd frontend
@@ -122,130 +70,62 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>.
-
-In development, requesting a verification code creates a one-time development code and automatically fills it in the web form. Public deployments must configure an external email or SMS channel.
-
-### 4. Generate and iterate on a game
-
-After registering and signing in, try:
+Open <http://localhost:5173>, register, and try:
 
 > Build a retro pixel-art Snake game with arrow-key controls, scoring, pause, and restart.
 
-Then continue with:
+Development mode creates and auto-fills a local one-time verification code. See [Getting started](./docs/getting-started.en.md) for cross-platform steps, checkpoints, and troubleshooting.
 
-> Preserve the existing gameplay and add a high-score record plus gradually increasing speed.
+## Try the examples without a model key
 
-The second request receives the project's existing files.
+```bash
+python -m http.server 4173
+```
 
-## Model configuration
+Open <http://localhost:4173/examples/>:
 
-| Provider | `LLM_PROVIDER` | Required variable | Default model |
-|---|---|---|---|
-| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-flash` |
-| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-5.6-terra` |
-| Qwen | `qwen` | `QWEN_API_KEY` | `qwen3.7-plus` |
+- [Neon Snake](./examples/neon-snake/index.html)
+- [Prism Breakout](./examples/prism-breakout/index.html)
+- [Orbit Dodge](./examples/orbit-dodge/index.html)
 
-The default IDs were updated from the providers' official model catalogs on 2026-07-23. Model names evolve, so check the [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing), [OpenAI](https://developers.openai.com/api/docs/guides/latest-model), and [Qwen](https://help.aliyun.com/zh/model-studio/getting-started/models) documentation before upgrading. Every default can be overridden with an environment variable.
+## Architecture
 
-See [`backend/.env.example`](./backend/.env.example) for all variables and base URLs. DreamCoder initializes the selected provider on the first generation request, not during application startup.
+```mermaid
+flowchart LR
+    U["Natural-language request"] --> V["Vue workspace"]
+    V --> A["FastAPI route adapter"]
+    A --> R["Generation Run module"]
+    R --> W["LangGraph workflow"]
+    W --> L["LLM provider"]
+    W --> F["Generated Artifact module"]
+    F --> P["Source and isolated preview"]
+    R --> D[("SQLite default")]
+```
 
-## Local and hosted profiles
+Local development only requires Python, Node.js, SQLite, and one model provider. PostgreSQL, Redis, ChromaDB, and Docker Compose are optional adapters for hosted or experimental scenarios, not mandatory stack decoration.
 
-| Capability | Local default | Hosted deployment |
+## Documentation
+
+| Goal | English | 中文 |
 |---|---|---|
-| Database | SQLite | PostgreSQL |
-| Verification storage | In-process TTL store | Redis |
-| Verification delivery | Development console code | SMTP / SMS |
-| Template retrieval | In-memory keywords | Optional ChromaDB |
-| Startup | Python + Node | Optional Docker Compose |
+| Run it locally | [Getting started](./docs/getting-started.en.md) | [入门指南](./docs/getting-started.md) |
+| Understand the design | [Architecture](./docs/architecture.en.md) | [架构说明](./docs/architecture.md) |
+| Host the application | [Deployment](./docs/deployment.en.md) | [部署指南](./docs/deployment.md) |
+| Review security boundaries | [Security](./docs/security.en.md) | [安全说明](./docs/security.md) |
+| Contribute | [Contributing](./CONTRIBUTING.md) | [贡献指南](./CONTRIBUTING.md) |
+| See what is next | [Roadmap](./ROADMAP.md) | [Roadmap](./ROADMAP.md) |
 
-Install hosted and experimental adapters with:
+See [`backend/.env.example`](./backend/.env.example) for provider variables and overridable model IDs. Model catalogs evolve; verify an ID against the provider's official documentation before use.
 
-```bash
-pip install -r backend/requirements-optional.txt
-```
+## Current boundaries
 
-### Optional Docker Compose
+- The primary target is HTML/CSS/JavaScript browser games.
+- Code validation is heuristic, not browser automation or a security audit.
+- SSE currently returns workflow step logs rather than token-level live streaming.
+- Public hosting requires external verification delivery, a strong `SECRET_KEY`, explicit `CORS_ALLOWED_ORIGINS`, and stronger preview isolation.
 
-Compose starts PostgreSQL, Redis, the backend, and the development frontend:
+## Contributing and license
 
-```bash
-cp backend/.env.example .env
-# Edit the root .env and set at least a model key and SECRET_KEY.
-docker compose --profile dev up --build
-```
+Reproducible generation failures, example games, provider compatibility fixes, and security improvements are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 
-Before a public deployment, set:
-
-```env
-ENVIRONMENT=production
-AUTH_DELIVERY_MODE=external
-SECRET_KEY=a-long-random-secret
-```
-
-Then configure SMTP or Alibaba Cloud SMS. Docker is a deployment option, not a prerequisite for local development.
-
-## Tests and builds
-
-Backend:
-
-```bash
-cd backend
-python -m unittest discover -s tests -v
-```
-
-Frontend:
-
-```bash
-cd frontend
-npm run build
-```
-
-## Repository layout
-
-```text
-DreamCoder/
-├── backend/
-│   ├── core/                 # Configuration, models, templates, adapters
-│   ├── modules/              # Deep business modules
-│   │   ├── generation_run.py
-│   │   └── generated_artifact.py
-│   ├── routers/              # FastAPI route adapters
-│   ├── workflows/            # LangGraph game-generation workflow
-│   ├── tests/                # Lifecycle, authentication, and store tests
-│   ├── .env.example
-│   ├── requirements.txt      # Core local dependencies
-│   └── requirements-optional.txt
-├── frontend/                 # Vue workspace, source view, and preview
-├── CONTEXT.md                # Domain vocabulary
-├── Dockerfile
-└── docker-compose.yml
-```
-
-## Current limitations
-
-- The primary target is HTML/CSS/JavaScript browser games. Other languages only receive download and execution guidance.
-- Code validation is heuristic; it is not browser automation or a security audit.
-- Preview now uses a CSP and a minimal iframe sandbox, but it has not received a complete untrusted multi-tenant security audit.
-- The SSE endpoint currently emits step logs after the workflow finishes; it is not token- or node-level live streaming.
-- ChromaDB and MCP remain optional experiments rather than part of the core quickstart.
-- The in-process verification store is suitable only for single-process local development.
-
-## Roadmap
-
-- [x] Block generated-artifact path traversal and reduce iframe/network privileges
-- [ ] Move preview execution to a separate origin or isolated container
-- [ ] Centralize provider differences, structured parsing, and retry behavior
-- [ ] Add real node-level progress streaming
-- [ ] Publish an example-game gallery and demo GIF
-- [ ] Add CI, contribution guidelines, Discussions, and good first issues
-- [ ] Evaluate retrieval and generated-code quality with reproducible datasets
-
-## Contributing
-
-Issues and pull requests are welcome. Useful contributions include reproducible generation failures, browser-game examples, provider adapters, tests, security improvements, and quickstart reports from different operating systems.
-
-## License
-
-DreamCoder is licensed under the [MIT License](./LICENSE).
+DreamCoder is available under the [MIT License](./LICENSE).
