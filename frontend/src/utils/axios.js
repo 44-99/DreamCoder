@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 
 // 创建axios实例
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json'
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
                 console.error('刷新 Token 失败:', refreshError);
             }
             authStore.logout();
-            window.location.href = '/login';
+            window.location.href = '/chat';
         }
         return Promise.reject(error);
     }

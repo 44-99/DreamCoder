@@ -10,14 +10,20 @@ from email.utils import formataddr, formatdate
 from typing import Optional
 
 import jwt
-import redis
-from aliyunsdkcore.client import AcsClient
-from aliyunsdkcore.request import CommonRequest
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 
-from core.dependencies import get_db, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, pwd_context, get_redis, logger
+from core.dependencies import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    SECRET_KEY,
+    get_db,
+    get_verification_store,
+    logger,
+    pwd_context,
+)
 from core.models import User
+from core.verification_store import VerificationCodeStore
 
 router = APIRouter(prefix="/auth", tags=["用户认证"])
 
@@ -37,8 +43,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def login(username: str = Body(..., description="用户名或ID"), password: str = Body(..., description="密码"),
           db: Session = Depends(get_db)):
     user = None
-    hashed_password = pwd_context.hash(password)
-    logger.info(f"用户登录: {username}, 密码哈希: {hashed_password}")
+    logger.info("用户登录: %s", username)
     if username.isdigit():
         user = db.query(User).filter(User.id == int(username)).first()
     if not user:
@@ -84,7 +89,7 @@ def register(
     email: Optional[str] = Body(None, description="电子邮箱"),
     verificationCode: str = Body(..., description="验证码"),
     db: Session = Depends(get_db),
-    redis_client: redis.Redis = Depends(get_redis),
+    verification_store: VerificationCodeStore = Depends(get_verification_store),
 ):
     import time
     start_time = time.time()
@@ -94,7 +99,7 @@ def register(
         contact = phone or email
         if not contact:
             raise HTTPException(status_code=400, detail="请提供手机号或邮箱")
-        stored_code = redis_client.get(f"verification_code:{contact}")
+        stored_code = verification_store.get(f"verification_code:{contact}")
         if isinstance(stored_code, bytes):
             stored_code = stored_code.decode()
         elif stored_code is None:
@@ -115,6 +120,7 @@ def register(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        verification_store.delete(f"verification_code:{contact}")
         token_data = {"id": new_user.id}
         access_token = create_access_token(data=token_data, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
         return {
@@ -135,6 +141,9 @@ def register(
 
 
 def send_sms(phone: str, code: str):
+    from aliyunsdkcore.client import AcsClient
+    from aliyunsdkcore.request import CommonRequest
+
     client = AcsClient(os.getenv("ALIBABA_CLOUD_ACCESS_KEY_ID"), os.getenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET"),
                        "cn-hangzhou")
     request = CommonRequest()
@@ -144,8 +153,12 @@ def send_sms(phone: str, code: str):
     request.set_action_name("SendSms")
 
     request.add_query_param("PhoneNumbers", phone)
-    request.add_query_param("SignName", "你的签名名称")  # 替换为你的短信签名
-    request.add_query_param("TemplateCode", "你的模板CODE")  # 替换为你的短信模板CODE
+    sign_name = os.getenv("ALIBABA_SMS_SIGN_NAME")
+    template_code = os.getenv("ALIBABA_SMS_TEMPLATE_CODE")
+    if not sign_name or not template_code:
+        raise HTTPException(status_code=500, detail="短信服务尚未配置")
+    request.add_query_param("SignName", sign_name)
+    request.add_query_param("TemplateCode", template_code)
     request.add_query_param("TemplateParam", f'{{"code":"{code}"}}')
 
     response = client.do_action_with_exception(request)
@@ -153,10 +166,12 @@ def send_sms(phone: str, code: str):
 
 
 def send_email(to_email: str, code: str):
-    smtp_server = os.getenv("SMTP_SERVER", "smtp.qq.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "465"))
+    smtp_server = os.getenv("SMTP_SERVER") or "smtp.qq.com"
+    smtp_port = int(os.getenv("SMTP_PORT") or "465")
     sender = os.getenv("SMTP_SENDER", "")
     email_password = os.getenv("SMTP_PASSWORD", "")
+    if not sender or not email_password:
+        raise HTTPException(status_code=500, detail="邮件验证码服务尚未配置")
 
     subject = "验证码通知"
     content = f"您的DreamCoder账号验证码是：{code}，有效期5分钟。"
@@ -172,7 +187,7 @@ def send_email(to_email: str, code: str):
         # 添加超时和调试日志
         logger.info(f"尝试连接 SMTP: {smtp_server}:{smtp_port}")
         server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
-        logger.info(f"SMTP 连接成功，尝试登录...")
+        logger.info("SMTP 连接成功，尝试登录...")
         server.login(sender, email_password)
         logger.info(f"SMTP 登录成功，发送邮件至 {to_email}...")
         server.sendmail(sender, [to_email], message.as_string())
@@ -181,11 +196,11 @@ def send_email(to_email: str, code: str):
         return True
     except smtplib.SMTPAuthenticationError as e:
         logger.error(f"邮件发送失败: SMTP 认证失败 - {e}")
-        logger.error(f"请检查: 1) 授权码是否正确 2) QQ邮箱是否开启SMTP服务 3) 授权码是否已过期")
+        logger.error("请检查: 1) 授权码是否正确 2) QQ邮箱是否开启SMTP服务 3) 授权码是否已过期")
         raise HTTPException(status_code=500, detail="SMTP 认证失败，请检查邮箱授权码")
     except smtplib.SMTPServerDisconnected as e:
         logger.error(f"邮件发送失败: SMTP 连接断开 - {e}")
-        logger.error(f"可能原因: 1) 网络问题 2) 防火墙阻止 3) QQ邮箱SMTP服务异常")
+        logger.error("可能原因: 1) 网络问题 2) 防火墙阻止 3) QQ邮箱SMTP服务异常")
         raise HTTPException(status_code=500, detail="SMTP 连接失败，请检查网络或防火墙设置")
     except Exception as e:
         logger.error(f"邮件发送失败: {type(e).__name__} - {e}")
@@ -195,14 +210,30 @@ def send_email(to_email: str, code: str):
 @router.post("/verification", summary="发送验证码到手机或邮箱")
 def send_verification_code(phone: Optional[str] = Body(None, description="电话号码"),
                            email: Optional[str] = Body(None, description="电子邮箱"),
-                           redis_client: redis.Redis = Depends(get_redis)):
+                           verification_store: VerificationCodeStore = Depends(get_verification_store)):
     if not phone and not email:
         raise HTTPException(status_code=400, detail="请提供电话号码或邮箱")
     if phone and email:
         raise HTTPException(status_code=400, detail="只能提供电话号码或邮箱中的一种")
     verification_code = str(random.randint(100000, 999999))
     target = phone or email
-    redis_client.setex(f"verification_code:{target}", 300, verification_code)
+    verification_store.setex(f"verification_code:{target}", 300, verification_code)
+
+    delivery_mode = os.getenv("AUTH_DELIVERY_MODE", "console").lower()
+    if delivery_mode == "console":
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            raise HTTPException(status_code=500, detail="生产环境不能使用控制台验证码模式")
+        logger.warning("开发验证码 [%s]: %s", target, verification_code)
+        return {
+            "success": True,
+            "message": "开发模式验证码已生成",
+            "channel": "console",
+            "target": target,
+            "dev_code": verification_code,
+        }
+
+    if delivery_mode != "external":
+        raise HTTPException(status_code=500, detail="AUTH_DELIVERY_MODE 配置无效")
     if phone:
         send_sms(phone, verification_code)
         channel = "手机"
@@ -215,7 +246,7 @@ def send_verification_code(phone: Optional[str] = Body(None, description="电话
 
 @router.post("/forgot-password", summary="忘记密码发送验证码")
 def forgot_password(text: str = Body(..., description="用户名/邮箱/手机号"), db: Session = Depends(get_db),
-                    redis_client: redis.Redis = Depends(get_redis)):
+                    verification_store: VerificationCodeStore = Depends(get_verification_store)):
     email_pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
     phone_pattern = r"^1[3-9]\d{9}$"
     if re.match(email_pattern, text):
@@ -243,7 +274,18 @@ def forgot_password(text: str = Body(..., description="用户名/邮箱/手机�
         else:
             raise HTTPException(status_code=400, detail="该用户未绑定邮箱或手机号")
     verification_code = str(random.randint(100000, 999999))
-    redis_client.setex(f"verification_code:{target}", 300, verification_code)
+    verification_store.setex(f"verification_code:{target}", 300, verification_code)
+    if os.getenv("AUTH_DELIVERY_MODE", "console").lower() == "console":
+        if os.getenv("ENVIRONMENT", "development").lower() == "production":
+            raise HTTPException(status_code=500, detail="生产环境不能使用控制台验证码模式")
+        logger.warning("开发验证码 [%s]: %s", target, verification_code)
+        return {
+            "success": True,
+            "message": "开发模式验证码已生成",
+            "channel": "console",
+            "target": target,
+            "dev_code": verification_code,
+        }
     if channel == "邮箱":
         send_email(str(target), verification_code)
     else:

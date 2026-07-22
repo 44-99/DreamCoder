@@ -52,6 +52,8 @@ yarn-error.log*
 # Generated projects
 backend/generated_projects/*
 !backend/generated_projects/.gitkeep
+backend/static/projects/*
+!backend/static/projects/.gitkeep
 
 # ChromaDB data
 backend/data/chroma_db/*

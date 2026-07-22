@@ -4,26 +4,15 @@ RAG知识库模块 - 管理游戏模板和向量检索
 """
 import os
 from typing import List, Dict, Any, Optional
-import json
-from pathlib import Path
 
 from core.dependencies import logger
 
 try:
     import chromadb
-    from chromadb.config import Settings
     CHROMADB_AVAILABLE = True
 except ImportError:
     CHROMADB_AVAILABLE = False
-    logger.warning("ChromaDB未安装，使用内存知识库")
-
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    logger.warning("OpenAI未安装，使用简单知识库")
-
+    logger.info("ChromaDB optional adapter unavailable; using keyword templates")
 
 class GameTemplateDB:
     """游戏模板数据库 - 使用RAG检索相似游戏模板"""
@@ -41,18 +30,19 @@ class GameTemplateDB:
 
             if CHROMADB_AVAILABLE:
                 # 使用ChromaDB
-                client = chromadb.PersistentClient(path="./data/chroma_db")
+                client = chromadb.PersistentClient(
+                    path=os.getenv("CHROMA_DB_DIR", "./data/chroma_db")
+                )
                 self.collection = client.get_or_create_collection(
                     name="game_templates",
                     metadata={"description": "游戏模板向量数据库"}
                 )
 
-                # 检查是否需要初始化数据
-                if self.collection.count() == 0:
-                    await self._preload_templates()
-
-            # 总是加载模板到内存
+            # Load the source templates before optional vector indexing.
             await self._load_templates()
+
+            if self.collection is not None and self.collection.count() == 0:
+                await self._preload_templates()
 
             self.is_initialized = True
             logger.info("游戏模板知识库初始化完成")

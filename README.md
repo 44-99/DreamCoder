@@ -1,201 +1,250 @@
-# DreamCoder - AI游戏生成与聊天系统
+<div align="center">
+  <img src="./frontend/src/assets/logo.svg" alt="DreamCoder logo" width="96" />
+  <h1>DreamCoder</h1>
+  <p><strong>用自然语言生成、继续修改并预览可运行的 Web 小游戏。</strong></p>
+  <p>一个面向 AI 应用开发者与学习者的开源、自托管参考项目。</p>
 
-基于 LangChain/LangGraph 的智能游戏生成平台，通过自然语言对话界面自动生成可运行的Web游戏项目，支持实时聊天交互。
+  [English](./README_EN.md) · 简体中文
 
-## 🚀 核心特性
+  [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+  [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+  [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg?logo=vue.js&logoColor=white)](https://vuejs.org/)
+</div>
 
-- **AI对话驱动**: 通过自然语言聊天界面进行游戏需求分析和代码生成
-- **LangGraph工作流**: 状态图管理游戏生成全流程，支持追踪和恢复
-- **RAG知识库**: ChromaDB向量检索相似游戏模板
-- **MCP工具**: 文件系统、终端等工具调用支持
-- **实时预览**: 生成的游戏支持即时预览和编辑
-- **代码审查**: 自动生成质量评分和测试报告
-- **用户管理**: 集成账号管理、头像上传、密码修改等功能
+## DreamCoder 是什么？
 
-## 🛠️ 技术栈
+DreamCoder 展示了一个完整 LLM 应用如何把自然语言需求转换为可运行的 HTML/CSS/JavaScript 小游戏，并维护项目、聊天、生成文件和后续修改。
 
-### 后端
-- **FastAPI**: 高性能Web框架
-- **LangChain**: LLM应用开发框架
-- **LangGraph**: 状态图工作流编排
-- **LangSmith**: 应用追踪和调试
-- **PostgreSQL**: 关系型数据库
-- **Redis**: 缓存和消息队列
-- **ChromaDB**: 向量数据库
+它适合：
 
-### 前端
-- **Vue 3**: 渐进式前端框架
-- **Vite**: 快速构建工具
-- **Pinia**: 状态管理
-- **Vue Router**: 路由管理
-- **Font Awesome**: 图标库
-- **TDesign**: UI组件库
+- 学习 FastAPI、Vue、LangGraph 和 LLM 应用工程的开发者；
+- 希望研究“需求 → 工作流 → 代码 → 预览”完整链路的学生和技术作者；
+- 需要快速验证浏览器小游戏想法的独立开发者和 Hackathon 团队。
 
-## 📦 快速开始
+它目前不是成熟的通用 AI IDE，也不是面向非技术用户的托管 SaaS。
+
+## 为什么值得研究？
+
+- **生成结果可试玩**：产物不只是文本，而是可以在浏览器中查看源码和预览的小游戏。
+- **支持继续修改**：已有文件会进入下一次生成，不会把“继续开发”退化成重新生成。
+- **生命周期可测试**：项目状态、数据库事务、步骤日志和失败收尾集中在 generation run module。
+- **本地启动轻量**：默认使用 SQLite 和进程内验证码存储，不要求 Docker、PostgreSQL 或 Redis。
+- **基础设施可升级**：托管部署时可切换 PostgreSQL、Redis、ChromaDB 和外部验证码渠道。
+
+## 核心流程
+
+```mermaid
+flowchart LR
+    U["用户描述游戏"] --> V["Vue 工作区"]
+    V --> A["FastAPI route adapter"]
+    A --> R["Generation Run module"]
+    R --> W["LangGraph 工作流"]
+    W --> L["LLM provider"]
+    W --> F["生成文件"]
+    R --> D[("SQLite 默认")]
+    F --> P["源码查看与浏览器预览"]
+    D -. 托管部署 .-> PG[("PostgreSQL")]
+    R -. 可选 .-> RD[("Redis")]
+```
+
+## 十分钟 Quickstart
 
 ### 环境要求
+
 - Python 3.11+
-- Node.js 20+
-- PostgreSQL 15+
-- Redis 7+
+- Node.js 20.19+ 或 22.12+
+- OpenAI、DeepSeek 或 Qwen 的一个 API Key
 
-### 本地开发
+Docker、PostgreSQL、Redis 和 ChromaDB 均不是本地启动的必需项。
 
-1. **克隆项目**
+### 1. 克隆并配置模型
+
 ```bash
 git clone https://github.com/44-99/DreamCoder.git
 cd DreamCoder
 ```
 
-2. **配置环境变量**
+macOS / Linux：
+
 ```bash
 cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入必要的配置
 ```
 
-3. **启动数据库服务**
-```bash
-docker-compose up postgres redis -d
+Windows PowerShell：
+
+```powershell
+Copy-Item backend/.env.example backend/.env
 ```
 
-4. **安装后端依赖**
+编辑 `backend/.env`。默认示例使用 DeepSeek：
+
+```env
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your-key
+```
+
+### 2. 启动后端
+
+macOS / Linux：
+
 ```bash
 cd backend
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-5. **启动后端服务**
-```bash
 uvicorn main:app --reload
 ```
 
-6. **安装前端依赖**
-```bash
-cd ../frontend
-npm install
+Windows PowerShell：
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --reload
 ```
 
-7. **启动前端服务**
+后端启动后可访问：
+
+- 健康检查：<http://localhost:8000/>
+- OpenAPI 文档：<http://localhost:8000/docs>
+
+### 3. 启动前端
+
+打开第二个终端：
+
 ```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-### Docker 部署
+访问 <http://localhost:5173>。
 
-开发模式（包含前后端）:
+开发模式发送验证码时，后端会生成一次性开发验证码，前端会自动填入。该模式只适合本机开发，公开部署必须配置外部邮件或短信渠道。
+
+### 4. 生成第一个游戏
+
+注册并登录后，可以输入：
+
+> 生成一个复古像素风贪吃蛇游戏，支持方向键控制、计分、暂停和重新开始。
+
+生成完成后，再输入：
+
+> 保留原有玩法，增加最高分记录和速度逐渐提升的机制。
+
+这次继续生成会把项目已有文件作为输入。
+
+## 模型配置
+
+| Provider | `LLM_PROVIDER` | 必需变量 | 默认模型 |
+|---|---|---|---|
+| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-chat` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o` |
+| Qwen | `qwen` | `QWEN_API_KEY` | `qwen-plus` |
+
+具体变量和 Base URL 示例见 [`backend/.env.example`](./backend/.env.example)。应用启动时不会连接模型；第一次生成时才检查对应 Key。
+
+## 本地模式与托管模式
+
+| 能力 | 本地默认 | 托管部署 |
+|---|---|---|
+| 数据库 | SQLite | PostgreSQL |
+| 验证码存储 | 进程内 TTL store | Redis |
+| 验证码渠道 | 控制台开发码 | SMTP / 短信 |
+| 模板检索 | 内存关键词 | 可选 ChromaDB |
+| 启动方式 | Python + Node | 可选 Docker Compose |
+
+安装托管部署和实验 adapters：
+
 ```bash
-docker-compose --profile dev up -d
+pip install -r backend/requirements-optional.txt
 ```
 
-生产模式:
+### 可选 Docker Compose
+
+Compose 会启动 PostgreSQL、Redis、后端和开发前端：
+
 ```bash
-# 先构建前端
+cp backend/.env.example .env
+# 编辑根目录 .env，至少设置模型 Key 和 SECRET_KEY
+docker compose --profile dev up --build
+```
+
+公开部署前必须设置：
+
+```env
+ENVIRONMENT=production
+AUTH_DELIVERY_MODE=external
+SECRET_KEY=a-long-random-secret
+```
+
+并配置 SMTP 或阿里云短信参数。Docker 是部署选项，不是本地开发前提。
+
+## 测试与构建
+
+后端：
+
+```bash
+cd backend
+python -m unittest discover -s tests -v
+```
+
+前端：
+
+```bash
 cd frontend
 npm run build
-
-# 启动服务
-cd ..
-docker-compose --profile production up -d
 ```
 
-访问:
-- 前端: http://localhost:5173 (开发) 或 http://localhost (生产)
-- 后端API: http://localhost:8000
-- API文档: http://localhost:8000/docs
+## 项目结构
 
-## 🎮 使用示例
-
-1. **注册/登录**
-   - 访问聊天界面完成用户注册和登录
-
-2. **通过对话生成游戏**
-   - 在聊天界面描述你想要的游戏
-   - 例如: "我想要一个贪吃蛇游戏，可以用方向键控制蛇吃食物"
-   - AI会通过对话确认需求并生成游戏
-
-3. **实时预览和编辑**
-   - 实时查看生成进度日志
-   - 在预览区域试玩游戏
-   - 查看和编辑生成的源代码
-   - 查看项目信息和质量评分
-
-4. **账号管理**
-   - 点击用户头像打开账号管理弹窗
-   - 上传头像、修改用户名、电话、邮箱
-   - 修改密码等个人信息管理
-
-5. **历史管理**
-   - 在聊天界面查看历史对话和项目
-   - 重新加载和预览历史项目
-
-## 📁 项目结构
-
-```
+```text
 DreamCoder/
 ├── backend/
-│   ├── core/              # 核心模块
-│   │   ├── models.py      # 数据库模型
-│   │   ├── dependencies.py # 依赖配置
-│   │   ├── knowledge_base.py # RAG知识库
-│   │   └── mcp_tool_manager.py # MCP工具管理
-│   ├── workflows/         # LangGraph工作流
-│   │   └── game_gen_workflow.py
-│   ├── routers/          # API路由
-│   │   ├── auth.py       # 认证
-│   │   ├── user.py       # 用户管理
-│   │   └── game_generation.py # 游戏生成
-│   ├── static/           # 静态资源
-│   └── main.py           # FastAPI入口
-├── frontend/
-│   ├── src/
-│   │   ├── views/        # 页面组件
-│   │   │   └── GameChatView.vue  # 主聊天界面
-│   │   ├── components/   # 组件
-│   │   │   └── ProfileModal.vue  # 账号管理弹窗
-│   │   ├── stores/       # 状态管理
-│   │   ├── utils/        # 工具函数
-│   │   │   └── htmlGenerator.js  # HTML生成器
-│   │   └── router/       # 路由配置
-│   └── package.json
-├── docker-compose.yml    # Docker编排
-├── Dockerfile           # Docker镜像
-└── nginx.conf           # Nginx配置
+│   ├── core/                 # 配置、模型、模板和基础 adapters
+│   ├── modules/              # deep 业务 modules
+│   │   └── generation_run.py
+│   ├── routers/              # FastAPI route adapters
+│   ├── workflows/            # LangGraph 游戏生成工作流
+│   ├── tests/                # 生命周期、认证和存储测试
+│   ├── .env.example
+│   ├── requirements.txt      # 本地核心依赖
+│   └── requirements-optional.txt
+├── frontend/                 # Vue 3 工作区、源码视图和预览
+├── CONTEXT.md                # 项目领域词汇
+├── Dockerfile
+└── docker-compose.yml
 ```
 
-## 🔧 API接口
+## 当前限制
 
-### 认证
-- `POST /auth/register` - 用户注册
-- `POST /auth/login` - 用户登录
-- `POST /auth/verification` - 发送验证码
+- 主要针对 HTML/CSS/JavaScript 浏览器小游戏；其他语言只有下载和运行提示。
+- 代码验证目前是启发式检查，不等同于浏览器自动化测试或安全审计。
+- 预览运行的是模型生成代码，尚未达到不可信多租户环境的隔离强度。
+- SSE endpoint 当前在工作流结束后返回步骤日志，不是真正的 token 或节点实时流。
+- ChromaDB 和 MCP 仍属于可选实验能力，不是核心 Quickstart 的组成部分。
+- 进程内验证码存储只适合单进程本地开发。
 
-### 用户管理
-- `PATCH /user/avatar` - 上传头像
-- `PATCH /user/username` - 修改用户名
-- `PATCH /user/phone` - 修改电话
-- `PATCH /user/email` - 修改邮箱
-- `POST /user/password` - 修改密码
+## Roadmap
 
-### 游戏生成与聊天
-- `POST /game/generate` - 生成游戏
-- `GET /game/generate/stream` - 流式生成（SSE）
-- `GET /game/projects` - 获取项目列表
-- `GET /game/projects/{id}` - 获取项目详情
-- `GET /game/projects/{id}/files` - 获取项目文件
-- `GET /game/projects/{id}/logs` - 获取生成日志
-- `GET /game/templates` - 获取游戏模板
-- `GET /game/templates/search` - 搜索模板
+- [ ] 强化生成产物路径校验和 iframe 隔离
+- [ ] 将模型 provider、结构化解析和重试集中到 deep module
+- [ ] 增加真正的节点级实时进度
+- [ ] 提供示例游戏 gallery 和演示 GIF
+- [ ] 增加 CI、贡献指南、Discussions 和 good first issues
+- [ ] 用评测集验证模板检索和代码质量，而不是使用未经验证的指标
 
-## 📊 性能指标
+## 贡献
 
-- **生成速度**: ~45秒/项目
-- **成功率**: >90%
-- **代码质量评分**: 平均85/100
+欢迎提交 Issue 和 Pull Request。特别欢迎：
 
-## 🤝 贡献指南
+- 可复现的生成失败案例；
+- 新的浏览器小游戏示例；
+- provider adapter、测试和安全改进；
+- Quickstart 在不同系统上的实测反馈。
 
-欢迎提交 Issue 和 Pull Request！
+## License
 
-## 📄 许可证
-
-Apache License 2.0
+DreamCoder 使用 [Apache License 2.0](./LICENSE)。

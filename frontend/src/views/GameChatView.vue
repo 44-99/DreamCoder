@@ -1185,7 +1185,10 @@ const sendVerificationCode = async () => {
       ? { email: registerForm.value.contact }
       : { phone: registerForm.value.contact };
 
-    await apiClient.post('/auth/verification', body);
+    const response = await apiClient.post('/auth/verification', body);
+    if (response.data.dev_code) {
+      registerForm.value.verificationCode = response.data.dev_code;
+    }
 
     // 开始倒计时
     countdown.value = 60;
@@ -1265,11 +1268,13 @@ const handleRegister = async () => {
   registerError.value = '';
 
   try {
+    const contact = registerForm.value.contact.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
     const response = await apiClient.post('/auth/register', {
       username: registerForm.value.username,
       password: registerForm.value.password,
-      contact: registerForm.value.contact,
-      verification_code: registerForm.value.verificationCode
+      ...(isEmail ? { email: contact } : { phone: contact }),
+      verificationCode: registerForm.value.verificationCode
     });
 
     await authStore.initAuth(response.data.access_token, response.data.user);

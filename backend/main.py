@@ -11,7 +11,7 @@ from core.dependencies import engine
 from core.models import Base
 from routers import auth, user, game_generation
 
-sys.path.append(str(Path(__file__).parent.parent))
+BACKEND_DIR = Path(__file__).resolve().parent
 
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -22,7 +22,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="DreamCoder", description="基于LangGraph的游戏生成系统", version="2.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"],
                    allow_headers=["*"], )
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(BACKEND_DIR / "static")), name="static")
 
 
 @app.get("/")

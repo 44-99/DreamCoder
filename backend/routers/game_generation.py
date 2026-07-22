@@ -4,9 +4,9 @@
 """
 import json
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -14,8 +14,12 @@ from pydantic import BaseModel
 from core.dependencies import get_db, logger
 from core.models import GameProject, GenerationStep, ChatMessage
 from core.permission import get_current_user
-from workflows.game_gen_workflow import run_game_generation, game_generation_app
 from core.knowledge_base import get_template_db
+from modules.generation_run import (
+    ProjectNotFoundError,
+    ProjectNotReadyError,
+    generation_run_module,
+)
 
 
 router = APIRouter(prefix="/game", tags=["游戏生成"])
@@ -60,7 +64,6 @@ class ChatMessageResponse(BaseModel):
 async def generate_game(
     request: GameGenerationRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -75,227 +78,34 @@ async def generate_game(
     try:
         user = current_user["user"]
 
-        # 判断是新建项目还是继续对话
-        is_new_project = request.project_id is None
-        project = None
-
-        if is_new_project:
-            # 创建新项目
-            project = GameProject(
-                user_id=user.id,
-                title=request.title or f"游戏项目-{datetime.now().strftime('%m%d_%H%M')}",
-                description=request.message,
-                status="generating",
-                files=None  # 新项目没有代码文件
-            )
-            db.add(project)
-            db.commit()
-            db.refresh(project)
-            logger.info(f"创建新项目 {project.id}: {project.title}")
-
-        else:
-            # 继续现有项目
-            project = db.query(GameProject).filter(
-                GameProject.id == request.project_id,
-                GameProject.user_id == user.id
-            ).first()
-
-            if not project:
-                raise HTTPException(status_code=404, detail="项目不存在")
-
-            if project.status != "completed":
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"项目当前状态为 {project.status}，请等待完成后再继续"
-                )
-
-            # 更新项目状态和描述
-            project.status = "generating"
-            project.description = f"{project.description}\n\n用户补充需求: {request.message}"
-            project.updated_at = datetime.now(timezone.utc)
-            logger.info(f"继续项目 {project.id}: {project.title}")
-
-        # 保存用户消息到聊天记录
-        user_message = ChatMessage(
-            project_id=project.id,
-            role="user",
-            content=request.message,
-            message_type="text",
-            extra_data={"action": "request"}
+        ticket = generation_run_module.begin(
+            user_id=user.id,
+            user_input=request.message,
+            project_id=request.project_id,
+            title=request.title,
         )
-        db.add(user_message)
-        db.commit()
-
-        # 判断是从零创建还是基于现有代码继续
-        existing_files = project.files if project.files else None
-        is_creating_from_scratch = existing_files is None or len(existing_files) == 0
 
         # 后台执行生成任务（多智能体自动判断）
         background_tasks.add_task(
-            _run_generation_task,
-            project_id=project.id,
-            user_id=user.id,
-            user_input=request.message,
-            existing_files=existing_files,
-            is_creating_from_scratch=is_creating_from_scratch,
-            db=db
+            generation_run_module.execute,
+            ticket,
         )
 
         return GameGenerationResponse(
-            project_id=project.id,
+            project_id=ticket.project_id,
             status="generating",
-            message="创建游戏..." if is_creating_from_scratch else "正在处理您的需求..."
+            message="创建游戏..." if ticket.is_creating_from_scratch else "正在处理您的需求..."
         )
 
+    except ProjectNotFoundError:
+        raise HTTPException(status_code=404, detail="项目不存在")
+    except ProjectNotReadyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"游戏生成请求失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-async def _run_generation_task(
-    project_id: int,
-    user_id: int,
-    user_input: str,
-    existing_files: Optional[dict] = None,
-    is_creating_from_scratch: bool = True,
-    db: Session = None
-):
-    """
-    后台执行生成任务
-    - is_creating_from_scratch=True: 从零创建新游戏
-    - is_creating_from_scratch=False: 基于现有代码添加功能
-    """
-    from starlette.concurrency import run_in_threadpool
-
-    start_time = datetime.now()
-    mode = "新建" if is_creating_from_scratch else "改进"
-    logger.info(f"开始{mode}项目 {project_id}，用户输入: {user_input[:100]}...")
-
-    try:
-        # 执行LangGraph工作流
-        result = await run_game_generation(user_id, user_input)
-
-        # 更新项目
-        project = db.query(GameProject).filter(GameProject.id == project_id).first()
-        if not project:
-            return
-
-        # 提取结果
-        generated_files = result.get('generated_files', {})
-        deployment_url = result.get('deployment_url')
-        quality_score = result.get('quality_score')
-        error = result.get('error')
-
-        # 更新项目信息
-        if generated_files:
-            project.files = generated_files
-        if deployment_url:
-            project.deployment_url = deployment_url
-        if quality_score is not None:
-            project.quality_score = quality_score
-
-        project.game_type = result.get('requirements', {}).get('game_type') or project.game_type
-        project.tech_stack = result.get('architecture', {}).get('tech_stack') or project.tech_stack
-        project.status = "completed" if not error else "failed"
-
-        # 计算生成时间（累加）
-        if project.generation_time:
-            project.generation_time += (datetime.now() - start_time).total_seconds()
-        else:
-            project.generation_time = (datetime.now() - start_time).total_seconds()
-
-        project.updated_at = datetime.now(timezone.utc)
-
-        # 记录生成步骤到 GenerationStep 表
-        logs = result.get('logs', [])
-        for log in logs:
-            step = GenerationStep(
-                project_id=project_id,
-                step_name=log.get('step'),
-                step_type=_map_step_type(log.get('step', '')),
-                status=log.get('status'),
-                input_data={
-                    "user_input": user_input,
-                    "mode": mode,
-                    "has_existing_files": existing_files is not None
-                },
-                output_data=log,
-                created_at=datetime.fromisoformat(log.get('timestamp', datetime.now().isoformat()))
-            )
-            db.add(step)
-
-            # 同时保存到聊天消息（作为助手消息）
-            assistant_message = ChatMessage(
-                project_id=project_id,
-                role="assistant",
-                content=log.get('message', ''),
-                message_type="log",
-                extra_data={
-                    "step": log.get('step'),
-                    "status": log.get('status'),
-                    "agent_name": log.get('agent_name'),
-                    "tool_name": log.get('tool_name'),
-                    "mode": mode
-                }
-            )
-            db.add(assistant_message)
-
-        # 添加最终完成消息
-        completion_message = f"✅ {mode}完成！"
-        if deployment_url:
-            completion_message += " 游戏已部署，可以在预览中查看。"
-        if quality_score:
-            completion_message += f" 代码质量评分: {quality_score:.1f}/100"
-
-        final_message = ChatMessage(
-            project_id=project_id,
-            role="assistant",
-            content=completion_message,
-            message_type="success",
-            extra_data={
-                "deployment_url": deployment_url,
-                "quality_score": quality_score,
-                "mode": mode
-            }
-        )
-        db.add(final_message)
-
-        db.commit()
-        logger.info(f"项目 {project_id} {mode}完成，耗时: {(datetime.now() - start_time).total_seconds():.1f}秒")
-
-    except Exception as e:
-        logger.error(f"生成任务执行失败: {e}", exc_info=True)
-
-        # 标记项目失败
-        project = db.query(GameProject).filter(GameProject.id == project_id).first()
-        if project:
-            project.status = "failed"
-            project.updated_at = datetime.now(timezone.utc)
-
-            # 添加错误消息到聊天
-            error_message = ChatMessage(
-                project_id=project_id,
-                role="assistant",
-                content=f"❌ {mode}失败：{str(e)}",
-                message_type="error",
-                extra_data={"error": str(e)}
-            )
-            db.add(error_message)
-            db.commit()
-
-
-def _map_step_type(step_name: str) -> str:
-    """映射步骤类型"""
-    step_map = {
-        "requirement_analyzer": "analysis",
-        "architect_designer": "design",
-        "code_generator": "coding",
-        "test_validator": "testing",
-        "deployment": "deployment"
-    }
-    return step_map.get(step_name, "other")
 
 
 # 获取项目列表
@@ -503,45 +313,29 @@ async def search_templates(query: str, top_k: int = 3):
 @router.get("/generate/stream")
 async def generate_game_stream(
     description: str,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """流式生成游戏 - SSE实时推送进度"""
+    user = current_user["user"]
+    ticket = generation_run_module.begin(
+        user_id=user.id,
+        user_input=description,
+        title=f"游戏-{datetime.now().strftime('%H%M%S')}",
+    )
 
     async def event_stream():
         try:
-            user = current_user["user"]
-
-            # 创建项目
-            project = GameProject(
-                user_id=user.id,
-                title=f"游戏-{datetime.now().strftime('%H%M%S')}",
-                description=description,
-                status="generating"
-            )
-            db.add(project)
-            db.commit()
-            db.refresh(project)
-
             # 发送项目ID
-            yield f"event: project_created\ndata: {json.dumps({'project_id': project.id, 'title': project.title})}\n\n"
+            yield f"event: project_created\ndata: {json.dumps({'project_id': ticket.project_id, 'title': ticket.title})}\n\n"
 
             # 执行生成
-            result = await run_game_generation(user.id, description)
+            outcome = await generation_run_module.execute(ticket)
 
             # 流式发送日志
-            logs = result.get('logs', [])
-            for log in logs:
+            for log in outcome.logs:
                 yield f"event: step_update\ndata: {json.dumps(log)}\n\n"
 
-            # 更新并完成
-            project.status = "completed" if not result.get('error') else "failed"
-            project.deployment_url = result.get('deployment_url')
-            project.quality_score = result.get('quality_score')
-            db.commit()
-
-            yield f"event: generation_complete\ndata: {json.dumps({'project_id': project.id, 'status': project.status, 'deployment_url': project.deployment_url})}\n\n"
+            yield f"event: generation_complete\ndata: {json.dumps({'project_id': outcome.project_id, 'status': outcome.status, 'deployment_url': outcome.deployment_url})}\n\n"
 
         except Exception as e:
             logger.error(f"SSE流式生成失败: {e}")

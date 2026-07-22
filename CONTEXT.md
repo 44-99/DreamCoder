@@ -1,0 +1,9 @@
+# DreamCoder Domain Context
+
+## Generation Run（生成运行）
+
+一次用户请求驱动的完整游戏生成生命周期。它可以创建新项目，也可以在已完成项目的现有文件上继续生成；负责项目状态转换、工作流执行、生成步骤、聊天记录以及成功或失败收尾。
+
+- **Generation Run module**：隐藏上述生命周期的 deep module。
+- **Run ticket（运行票据）**：`begin` 成功后产生的不可变快照，包含项目、用户输入、现有文件、运行模式和工作流线程标识。
+- **Route adapter**：把 HTTP 或 SSE 输入转换为 module interface 调用，不拥有生成事务或状态机。

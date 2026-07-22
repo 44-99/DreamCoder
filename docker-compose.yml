@@ -1,8 +1,6 @@
 # DreamCoder Docker Compose 配置
 # 包含 PostgreSQL, Redis, 后端服务和前端
 
-version: '3.8'
-
 services:
   # PostgreSQL 数据库
   postgres:
@@ -52,22 +50,40 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_REQUIRED: ${REDIS_REQUIRED:-true}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AUTH_DELIVERY_MODE: ${AUTH_DELIVERY_MODE:-console}
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 1440
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      QWEN_API_KEY: ${QWEN_API_KEY:-}
+      QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      QWEN_MODEL: ${QWEN_MODEL:-qwen-plus}
       LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
       LANGCHAIN_PROJECT: dreamcoder-game-generation
       ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
-      PROJECTS_DIR: ./generated_projects
+      ALIBABA_SMS_SIGN_NAME: ${ALIBABA_SMS_SIGN_NAME:-}
+      ALIBABA_SMS_TEMPLATE_CODE: ${ALIBABA_SMS_TEMPLATE_CODE:-}
+      SMTP_SERVER: ${SMTP_SERVER:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SENDER: ${SMTP_SENDER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      PROJECTS_DIR: ./static/projects
       AVATAR_DIR: ./static/avatars
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/generated_projects:/app/generated_projects
+      - ./backend/generated_projects:/app/static/projects
       - ./backend/data:/app/data
     depends_on:
       postgres:
@@ -86,7 +102,7 @@ services:
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     environment:
-      VITE_API_BASE_URL: http://backend:8000
+      VITE_API_BASE_URL: http://localhost:8000
     ports:
       - "5173:5173"
     volumes:

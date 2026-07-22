@@ -5,13 +5,13 @@
 
 
 import os
-from typing import TypedDict, Annotated, List, Dict, Any, Optional
+from functools import lru_cache
+from typing import TypedDict, List, Dict, Any, Optional
 from datetime import datetime
 import json
-import asyncio
 from pathlib import Path
 
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -25,6 +25,7 @@ class GameState(TypedDict):
     """游戏生成状态管理"""
     user_id: int
     user_input: str  # 用户自然语言输入
+    existing_files: Optional[Dict[str, str]]  # 继续生成时的现有文件快照
     game_type: Optional[str]  # 游戏类型
     requirements: Optional[Dict[str, Any]]  # 需求分析结果
     selected_template: Optional[Dict[str, Any]]  # 选中的模板
@@ -65,36 +66,50 @@ class FileGenerationResult(BaseModel):
 
 
 # 初始化LLM - 支持多种模型提供商
+@lru_cache(maxsize=1)
 def get_llm():
     """根据环境变量选择LLM提供商"""
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
 
     # 代码生成任务推荐使用较低的温度以保证稳定性和准确性
     code_gen_temp = float(os.getenv("CODE_GEN_TEMPERATURE", "0.2"))
-    logger.info(f"Using LLM provider: {provider} with temperature: {code_gen_temp} with API_KEY: {os.getenv('DEEPSEEK_API_KEY')} and BASE_URL: {os.getenv('DEEPSEEK_BASE_URL')}")
+    logger.info(
+        "Using LLM provider: %s with temperature: %s",
+        provider,
+        code_gen_temp,
+    )
     if provider == "deepseek":
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise RuntimeError("LLM_PROVIDER=deepseek requires DEEPSEEK_API_KEY")
         # DeepSeek 使用 OpenAI 兼容的 API
         # 官方推荐代码生成使用 temperature=0.0
         return ChatOpenAI(
             model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
             temperature=code_gen_temp,
-            openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+            openai_api_key=api_key,
             openai_api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
         )
     elif provider == "qwen":
+        api_key = os.getenv("QWEN_API_KEY")
+        if not api_key:
+            raise RuntimeError("LLM_PROVIDER=qwen requires QWEN_API_KEY")
         # 通义千问 (阿里云)
         return ChatOpenAI(
             model=os.getenv("QWEN_MODEL", "qwen-plus"),
             temperature=code_gen_temp,
-            openai_api_key=os.getenv("QWEN_API_KEY"),
+            openai_api_key=api_key,
             openai_api_base=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
         )
     else:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("LLM_PROVIDER=openai requires OPENAI_API_KEY")
         # 默认使用 OpenAI
         return ChatOpenAI(
             model=os.getenv("OPENAI_MODEL", "gpt-4o"),
             temperature=code_gen_temp,
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_key=api_key,
             openai_api_base=os.getenv("OPENAI_BASE_URL")
         )
 
@@ -112,15 +127,13 @@ def supports_structured_output():
     return provider not in unsupported_providers
 
 
-llm = get_llm()
-
-
 # 1. 需求分析节点
 async def requirement_analyzer_node(state: GameState) -> GameState:
     """分析用户需求，提取游戏规格"""
     logger.info(f"需求分析节点开始执行，用户输入: {state['user_input']}")
 
     try:
+        llm = get_llm()
         if supports_structured_output():
             # 支持结构化输出的提供商（如 OpenAI）
             system_prompt = """
@@ -229,6 +242,7 @@ async def architect_designer_node(state: GameState) -> GameState:
     requirements = state.get('requirements', {})
 
     try:
+        llm = get_llm()
         if supports_structured_output():
             # 支持结构化输出的提供商
             messages = [
@@ -311,7 +325,7 @@ async def architect_designer_node(state: GameState) -> GameState:
 # 3. 代码生成节点
 async def code_generator_node(state: GameState) -> GameState:
     """生成游戏代码"""
-    logger.info(f"代码生成节点开始执行")
+    logger.info("代码生成节点开始执行")
 
     system_prompt = """
     你是一个游戏代码生成专家。生成完整、可运行的游戏代码。
@@ -331,8 +345,19 @@ async def code_generator_node(state: GameState) -> GameState:
 
     requirements = state.get('requirements', {})
     architecture = state.get('architecture', {})
+    existing_files = state.get('existing_files') or {}
+
+    continuation_context = ""
+    if existing_files:
+        continuation_context = f"""
+
+            这是一次现有项目改进。请基于下面的完整文件集合实现用户的新需求，
+            保留未要求删除的功能，并在 files 中返回改进后的完整文件集合：
+            {json.dumps(existing_files, ensure_ascii=False)}
+            """
 
     try:
+        llm = get_llm()
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=f"""
@@ -347,9 +372,10 @@ async def code_generator_node(state: GameState) -> GameState:
             - 额外功能: {', '.join(requirements.get('features', []))}
 
             架构:
-            - 技术栈: {architecture.get('tech_stack', 'Vanilla JS')}
-            - 主要组件: {', '.join(architecture.get('main_components', []))}
-            """)
+             - 技术栈: {architecture.get('tech_stack', 'Vanilla JS')}
+             - 主要组件: {', '.join(architecture.get('main_components', []))}
+            {continuation_context}
+             """)
         ]
 
         response = await llm.ainvoke(messages)
@@ -387,8 +413,8 @@ async def code_generator_node(state: GameState) -> GameState:
             logger.warning(f"JSON解析失败，使用基础代码生成: {e}")
 
             # 生成一个简单的贪吃蛇游戏作为后备
-            simple_game = generate_simple_snake_game()
-            state['generated_files'] = simple_game
+            fallback_files = existing_files or generate_simple_snake_game()
+            state['generated_files'] = fallback_files
             state['logs'].append({
                 "step": "code_generator",
                 "status": "completed",
@@ -402,7 +428,7 @@ async def code_generator_node(state: GameState) -> GameState:
         logger.error(f"代码生成失败: {e}")
         state['error'] = f"代码生成失败: {str(e)}"
         # 返回基础游戏
-        state['generated_files'] = generate_simple_snake_game()
+        state['generated_files'] = existing_files or generate_simple_snake_game()
         state['logs'].append({
             "step": "code_generator",
             "status": "fallback",
@@ -645,7 +671,7 @@ def generate_simple_snake_game() -> Dict[str, str]:
 # 4. 测试验证节点
 async def test_validator_node(state: GameState) -> GameState:
     """验证生成的代码"""
-    logger.info(f"测试验证节点开始执行")
+    logger.info("测试验证节点开始执行")
 
     try:
         files = state.get('generated_files', {})
@@ -703,7 +729,7 @@ async def test_validator_node(state: GameState) -> GameState:
 # 5. 部署节点
 async def deployment_node(state: GameState) -> GameState:
     """部署游戏项目"""
-    logger.info(f"部署节点开始执行")
+    logger.info("部署节点开始执行")
 
     try:
         user_id = state['user_id']
@@ -774,11 +800,17 @@ def create_game_generation_workflow():
 game_generation_app = create_game_generation_workflow()
 
 
-async def run_game_generation(user_id: int, user_input: str, thread_id: str = None):
+async def run_game_generation(
+    user_id: int,
+    user_input: str,
+    existing_files: Optional[Dict[str, str]] = None,
+    thread_id: str = None,
+):
     """运行游戏生成流程"""
     initial_state = {
         "user_id": user_id,
         "user_input": user_input,
+        "existing_files": existing_files,
         "game_type": None,
         "requirements": None,
         "selected_template": None,
