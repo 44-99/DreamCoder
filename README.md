@@ -1,12 +1,14 @@
+<p align="right">
+  <strong>简体中文</strong> · <a href="./README_EN.md">English</a>
+</p>
+
 <div align="center">
-  <img src="./frontend/src/assets/logo.svg" alt="DreamCoder logo" width="96" />
+  <img src="./docs/assets/dreamcoder-logo.svg" alt="DreamCoder logo" width="96" />
   <h1>DreamCoder</h1>
   <p><strong>用自然语言生成、继续修改并预览可运行的 Web 小游戏。</strong></p>
   <p>一个面向 AI 应用开发者与学习者的开源、自托管参考项目。</p>
 
-  [English](./README_EN.md) · 简体中文
-
-  [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
   [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg?logo=vue.js&logoColor=white)](https://vuejs.org/)
 </div>
@@ -140,9 +142,11 @@ npm run dev
 
 | Provider | `LLM_PROVIDER` | 必需变量 | 默认模型 |
 |---|---|---|---|
-| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-chat` |
-| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o` |
-| Qwen | `qwen` | `QWEN_API_KEY` | `qwen-plus` |
+| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-flash` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-5.6-terra` |
+| Qwen | `qwen` | `QWEN_API_KEY` | `qwen3.7-plus` |
+
+默认 ID 于 2026-07-23 根据各 provider 官方模型目录更新；模型名称会演进，升级前请复核 [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing)、[OpenAI](https://developers.openai.com/api/docs/guides/latest-model) 与 [Qwen](https://help.aliyun.com/zh/model-studio/getting-started/models) 文档。所有默认值都可以通过环境变量覆盖。
 
 具体变量和 Base URL 示例见 [`backend/.env.example`](./backend/.env.example)。应用启动时不会连接模型；第一次生成时才检查对应 Key。
 
@@ -249,4 +253,4 @@ DreamCoder/
 
 ## License
 
-DreamCoder 使用 [Apache License 2.0](./LICENSE)。
+DreamCoder 使用 [MIT License](./LICENSE)。

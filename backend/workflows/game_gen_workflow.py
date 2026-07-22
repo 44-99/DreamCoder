@@ -87,7 +87,7 @@ def get_llm():
         # DeepSeek 使用 OpenAI 兼容的 API
         # 官方推荐代码生成使用 temperature=0.0
         return ChatOpenAI(
-            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
             temperature=code_gen_temp,
             openai_api_key=api_key,
             openai_api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
@@ -98,7 +98,7 @@ def get_llm():
             raise RuntimeError("LLM_PROVIDER=qwen requires QWEN_API_KEY")
         # 通义千问 (阿里云)
         return ChatOpenAI(
-            model=os.getenv("QWEN_MODEL", "qwen-plus"),
+            model=os.getenv("QWEN_MODEL", "qwen3.7-plus"),
             temperature=code_gen_temp,
             openai_api_key=api_key,
             openai_api_base=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
@@ -107,13 +107,18 @@ def get_llm():
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("LLM_PROVIDER=openai requires OPENAI_API_KEY")
-        # 默认使用 OpenAI
-        return ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL", "gpt-4o"),
-            temperature=code_gen_temp,
-            openai_api_key=api_key,
-            openai_api_base=os.getenv("OPENAI_BASE_URL")
-        )
+        openai_model = os.getenv("OPENAI_MODEL", "gpt-5.6-terra")
+        model_options = {
+            "model": openai_model,
+            "openai_api_key": api_key,
+            "openai_api_base": os.getenv("OPENAI_BASE_URL"),
+        }
+        if openai_model.startswith("gpt-5.6"):
+            # Structured output uses Chat Completions function tools.
+            model_options["reasoning_effort"] = "none"
+        else:
+            model_options["temperature"] = code_gen_temp
+        return ChatOpenAI(**model_options)
 
 
 def get_provider():

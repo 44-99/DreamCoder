@@ -9,7 +9,7 @@ Last updated: 2026-07-23
 - **One-liner**: 用自然语言生成、继续修改并预览可运行的 HTML/CSS/JavaScript 小游戏，同时展示一个完整 AI 应用如何组织工作流、项目状态和生成产物。
 - **Category**: 开源 AI 应用、开发者示例项目、自托管 Web 应用；当前不是成熟 SaaS，也不是通用 AI IDE。
 - **Core technology**: Python/FastAPI、Vue 3、LLM provider、可选 LangGraph、SQLAlchemy。
-- **Model**: Apache-2.0 开源项目；用户自行提供模型凭据。
+- **Model**: MIT 开源项目；用户自行提供模型凭据。
 
 ## Developer Persona
 
@@ -69,7 +69,7 @@ Last updated: 2026-07-23
 
 ## Technical Trust Signals
 
-- 必需：可复制的 quickstart、演示 GIF/视频、CI、自动测试、明确支持的模型、Apache-2.0 许可证。
+- 必需：可复制的 quickstart、演示 GIF/视频、CI、自动测试、明确支持的模型、MIT 许可证。
 - 必需：公开限制、安全说明、架构图、变更日志和版本化 release。
 - 当前基线（2026-07-23）：GitHub 1 star、0 fork、无 topics、无 homepage、无公开 Issue；不能用采用量作为主要信任信号。
 - 近期最有价值的证明：10 分钟内首次生成成功、示例项目、测试通过、真实问题复盘。

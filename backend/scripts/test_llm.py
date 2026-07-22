@@ -1,7 +1,7 @@
 """统一模型测试脚本 - 支持通过环境变量选择不同的LLM提供商"""
 import os
 from pathlib import Path
-from dotenv import dotenv_values, load_dotenv
+from dotenv import dotenv_values
 from langchain_openai import ChatOpenAI
 
 # 加载环境变量 - 从backend目录加载
@@ -34,30 +34,34 @@ print("=" * 60)
 
 def get_llm():
     """根据环境变量选择LLM提供商"""
+    model_options = {"temperature": CODE_GEN_TEMP}
     if LLM_PROVIDER == "deepseek":
         # DeepSeek 使用 OpenAI 兼容的 API
         api_key = os.getenv("DEEPSEEK_API_KEY")
         base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-        model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     elif LLM_PROVIDER == "qwen":
         # 通义千问 (阿里云)
         api_key = os.getenv("QWEN_API_KEY")
         base_url = os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-        model = os.getenv("QWEN_MODEL", "qwen-plus")
+        model = os.getenv("QWEN_MODEL", "qwen3.7-plus")
     else:
         # 默认使用 OpenAI
         api_key = os.getenv("OPENAI_API_KEY")
         base_url = os.getenv("OPENAI_BASE_URL")
-        model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        model = os.getenv("OPENAI_MODEL", "gpt-5.6-terra")
+        if model.startswith("gpt-5.6"):
+            model_options = {"reasoning_effort": "none"}
 
-    print(f"API Key: {api_key[:10]}...{api_key[-4:] if api_key else 'None'}")
+    masked_key = f"{api_key[:10]}...{api_key[-4:]}" if api_key else "None"
+    print(f"API Key: {masked_key}")
     print(f"Base URL: {base_url}")
     print(f"模型: {model}")
     return ChatOpenAI(
         model=model,
-        temperature=CODE_GEN_TEMP,
         openai_api_key=api_key,
-        openai_api_base=base_url
+        openai_api_base=base_url,
+        **model_options,
     )
 
 

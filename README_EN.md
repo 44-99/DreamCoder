@@ -1,12 +1,14 @@
+<p align="right">
+  <a href="./README.md">简体中文</a> · <strong>English</strong>
+</p>
+
 <div align="center">
-  <img src="./frontend/src/assets/logo.svg" alt="DreamCoder logo" width="96" />
+  <img src="./docs/assets/dreamcoder-logo.svg" alt="DreamCoder logo" width="96" />
   <h1>DreamCoder</h1>
   <p><strong>Generate, iterate on, and preview playable web games with natural language.</strong></p>
   <p>An open-source, self-hosted reference project for AI application developers and learners.</p>
 
-  English · [简体中文](./README.md)
-
-  [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
+  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
   [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
   [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg?logo=vue.js&logoColor=white)](https://vuejs.org/)
 </div>
@@ -140,9 +142,11 @@ The second request receives the project's existing files.
 
 | Provider | `LLM_PROVIDER` | Required variable | Default model |
 |---|---|---|---|
-| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-chat` |
-| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o` |
-| Qwen | `qwen` | `QWEN_API_KEY` | `qwen-plus` |
+| DeepSeek | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-v4-flash` |
+| OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-5.6-terra` |
+| Qwen | `qwen` | `QWEN_API_KEY` | `qwen3.7-plus` |
+
+The default IDs were updated from the providers' official model catalogs on 2026-07-23. Model names evolve, so check the [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing), [OpenAI](https://developers.openai.com/api/docs/guides/latest-model), and [Qwen](https://help.aliyun.com/zh/model-studio/getting-started/models) documentation before upgrading. Every default can be overridden with an environment variable.
 
 See [`backend/.env.example`](./backend/.env.example) for all variables and base URLs. DreamCoder initializes the selected provider on the first generation request, not during application startup.
 
@@ -244,4 +248,4 @@ Issues and pull requests are welcome. Useful contributions include reproducible 
 
 ## License
 
-DreamCoder is licensed under the [Apache License 2.0](./LICENSE).
+DreamCoder is licensed under the [MIT License](./LICENSE).
