@@ -1,4 +1,24 @@
 // HTML 生成工具函数
+const PREVIEW_CSP = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline'",
+  "style-src 'unsafe-inline'",
+  "img-src data: blob:",
+  "media-src data: blob:",
+  "font-src data:",
+  "connect-src 'none'",
+  "form-action 'none'",
+  "base-uri 'none'"
+].join('; ')
+
+function applyPreviewPolicy(html) {
+  const policy = `<meta http-equiv="Content-Security-Policy" content="${PREVIEW_CSP}">`
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>\n${policy}`)
+  }
+  return `${policy}\n${html}`
+}
+
 export function generatePreviewHTML(files) {
   // 收集所有 HTML、CSS、JS 文件
   let htmlContent = '';
@@ -92,5 +112,5 @@ export function generatePreviewHTML(files) {
 </html>`;
   }
 
-  return htmlContent;
+  return htmlContent ? applyPreviewPolicy(htmlContent) : '';
 }

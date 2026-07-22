@@ -10,6 +10,7 @@ from typing import TypedDict, List, Dict, Any, Optional
 from datetime import datetime
 import json
 from pathlib import Path
+from uuid import uuid4
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -18,6 +19,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, Field
 
 from core.dependencies import logger
+from modules.generated_artifact import ArtifactValidationError, GeneratedArtifact
 
 
 # 定义游戏生成状态
@@ -676,8 +678,25 @@ async def test_validator_node(state: GameState) -> GameState:
     try:
         files = state.get('generated_files', {})
 
+        artifact_error = None
+        try:
+            artifact = GeneratedArtifact.from_mapping(files)
+            artifact_result = {
+                "test": "生成产物安全",
+                "passed": True,
+                "message": f"✓ {len(artifact.files)} 个文件通过路径和大小校验",
+            }
+        except ArtifactValidationError as exc:
+            artifact_error = str(exc)
+            artifact_result = {
+                "test": "生成产物安全",
+                "passed": False,
+                "message": f"✗ {artifact_error}",
+            }
+
         # 基本验证
         validation_results = [
+            artifact_result,
             {
                 "test": "HTML文件存在",
                 "passed": 'index.html' in files,
@@ -705,9 +724,11 @@ async def test_validator_node(state: GameState) -> GameState:
 
         state['test_results'] = validation_results
         state['quality_score'] = quality_score
+        if artifact_error:
+            state['error'] = f"生成产物校验失败: {artifact_error}"
         state['logs'].append({
             "step": "test_validator",
-            "status": "completed",
+            "status": "failed" if artifact_error else "completed",
             "message": f"测试完成，质量评分: {quality_score}",
             "timestamp": datetime.now().isoformat()
         })
@@ -732,19 +753,26 @@ async def deployment_node(state: GameState) -> GameState:
     logger.info("部署节点开始执行")
 
     try:
+        if state.get('error'):
+            state['logs'].append({
+                "step": "deployment",
+                "status": "skipped",
+                "message": "生成产物存在错误，已跳过部署",
+                "timestamp": datetime.now().isoformat(),
+            })
+            return state
+
         user_id = state['user_id']
         files = state.get('generated_files', {})
+        artifact = GeneratedArtifact.from_mapping(files)
 
-        # 创建项目目录
+        # Deploy a validated artifact into a unique directory.
         projects_dir = Path(os.getenv('PROJECTS_DIR', './generated_projects'))
-        project_dir = projects_dir / f"project_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        project_dir.mkdir(parents=True, exist_ok=True)
-
-        # 保存文件
-        for file_path, content in files.items():
-            file_full_path = project_dir / file_path
-            file_full_path.parent.mkdir(parents=True, exist_ok=True)
-            file_full_path.write_text(content, encoding='utf-8')
+        deployment_name = (
+            f"project_{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_"
+            f"{uuid4().hex[:8]}"
+        )
+        project_dir = artifact.deploy(projects_dir, deployment_name)
 
         # 计算相对URL
         deployment_url = f"/static/projects/{project_dir.name}/index.html"

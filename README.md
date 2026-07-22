@@ -205,7 +205,8 @@ DreamCoder/
 ├── backend/
 │   ├── core/                 # 配置、模型、模板和基础 adapters
 │   ├── modules/              # deep 业务 modules
-│   │   └── generation_run.py
+│   │   ├── generation_run.py
+│   │   └── generated_artifact.py
 │   ├── routers/              # FastAPI route adapters
 │   ├── workflows/            # LangGraph 游戏生成工作流
 │   ├── tests/                # 生命周期、认证和存储测试
@@ -222,14 +223,15 @@ DreamCoder/
 
 - 主要针对 HTML/CSS/JavaScript 浏览器小游戏；其他语言只有下载和运行提示。
 - 代码验证目前是启发式检查，不等同于浏览器自动化测试或安全审计。
-- 预览运行的是模型生成代码，尚未达到不可信多租户环境的隔离强度。
+- 预览已使用 CSP 和最小 iframe sandbox，但尚未经过不可信多租户环境的完整安全审计。
 - SSE endpoint 当前在工作流结束后返回步骤日志，不是真正的 token 或节点实时流。
 - ChromaDB 和 MCP 仍属于可选实验能力，不是核心 Quickstart 的组成部分。
 - 进程内验证码存储只适合单进程本地开发。
 
 ## Roadmap
 
-- [ ] 强化生成产物路径校验和 iframe 隔离
+- [x] 阻止生成产物路径穿越，并收紧 iframe sandbox 与联网权限
+- [ ] 将预览迁移到独立 origin 或隔离容器
 - [ ] 将模型 provider、结构化解析和重试集中到 deep module
 - [ ] 增加真正的节点级实时进度
 - [ ] 提供示例游戏 gallery 和演示 GIF

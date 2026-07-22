@@ -434,7 +434,9 @@
                 ref="previewFrame"
                 class="preview-iframe"
                 :srcdoc="previewContent"
-                sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
+                title="AI 生成游戏预览"
+                sandbox="allow-scripts"
+                referrerpolicy="no-referrer"
               ></iframe>
               <div v-if="previewLoading" class="preview-loading">
                 <font-awesome-icon :icon="faSpinner" spin size="2x" />

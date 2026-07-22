@@ -205,7 +205,8 @@ DreamCoder/
 ├── backend/
 │   ├── core/                 # Configuration, models, templates, adapters
 │   ├── modules/              # Deep business modules
-│   │   └── generation_run.py
+│   │   ├── generation_run.py
+│   │   └── generated_artifact.py
 │   ├── routers/              # FastAPI route adapters
 │   ├── workflows/            # LangGraph game-generation workflow
 │   ├── tests/                # Lifecycle, authentication, and store tests
@@ -222,14 +223,15 @@ DreamCoder/
 
 - The primary target is HTML/CSS/JavaScript browser games. Other languages only receive download and execution guidance.
 - Code validation is heuristic; it is not browser automation or a security audit.
-- Preview executes model-generated code and is not hardened for an untrusted multi-tenant environment.
+- Preview now uses a CSP and a minimal iframe sandbox, but it has not received a complete untrusted multi-tenant security audit.
 - The SSE endpoint currently emits step logs after the workflow finishes; it is not token- or node-level live streaming.
 - ChromaDB and MCP remain optional experiments rather than part of the core quickstart.
 - The in-process verification store is suitable only for single-process local development.
 
 ## Roadmap
 
-- [ ] Harden generated-artifact path validation and iframe isolation
+- [x] Block generated-artifact path traversal and reduce iframe/network privileges
+- [ ] Move preview execution to a separate origin or isolated container
 - [ ] Centralize provider differences, structured parsing, and retry behavior
 - [ ] Add real node-level progress streaming
 - [ ] Publish an example-game gallery and demo GIF
