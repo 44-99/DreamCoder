@@ -82,6 +82,14 @@ npm run validate
 
 Then follow [Getting started](./docs/getting-started.md) to load the local plugin in Codex or Claude Code and point it at a running Web 2D game.
 
+For a complete proof instead of a minimal demo, run the official [Signal Relay end-to-end example](./examples/signal-relay/README.md):
+
+```bash
+npm run example:signal-relay:e2e
+```
+
+It starts the game automatically and uses the real MCP server to verify native input, seed propagation, deterministic replay, pause behavior, the winning route, and runtime quality.
+
 Try prompts such as:
 
 ```text
@@ -114,6 +122,7 @@ Unity, Unreal, Godot, Three.js 3D scenes, and editor-dependent pipelines are out
 ## Documentation
 
 - [Getting started](./docs/getting-started.md)
+- [Signal Relay end-to-end example](./examples/signal-relay/README.md)
 - [Architecture](./docs/architecture.md)
 - [Game Bridge protocol](./docs/bridge-protocol.md)
 - [MCP tool reference](./docs/mcp-tools.md)
@@ -123,6 +132,6 @@ Unity, Unreal, Godot, Three.js 3D scenes, and editor-dependent pipelines are out
 
 ## Project status
 
-Web2DKit is an early working foundation. Its real Chromium integration test proves the state → action → assertion loop. The next credibility gate is validating the workflow in real puzzle, action, and simulation games before a stable release.
+Web2DKit is an early working foundation. Its real Chromium integration tests and Signal Relay puzzle example prove the state → action → assertion loop against an executable game. Action and simulation examples remain credibility gates before a stable release.
 
 MIT licensed. Built for developers who want coding agents to create games they can also understand, play, and verify.

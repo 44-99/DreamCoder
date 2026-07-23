@@ -1,0 +1,21 @@
+{
+  "name": "@web2dkit/signal-relay-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "check": "tsc -b --pretty false && node --check scripts/run-web2dkit-acceptance.mjs",
+    "validate": "npm run check && npm test && npm run build",
+    "acceptance": "node scripts/run-web2dkit-acceptance.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^4.1.10"
+  }
+}

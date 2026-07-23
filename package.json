@@ -29,6 +29,9 @@
   "engines": {
     "node": ">=22"
   },
+  "workspaces": [
+    "examples/signal-relay"
+  ],
   "files": [
     "dist",
     "skills",
@@ -53,7 +56,11 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate": "npm run check && npm test && npm run build"
+    "example:signal-relay:dev": "npm run dev --workspace @web2dkit/signal-relay-example",
+    "example:signal-relay:validate": "npm run validate --workspace @web2dkit/signal-relay-example",
+    "example:signal-relay:e2e": "npm run build && npm run example:signal-relay:validate && npm run acceptance --workspace @web2dkit/signal-relay-example",
+    "validate:core": "npm run check && npm test && npm run build",
+    "validate": "npm run validate:core && npm run example:signal-relay:validate && npm run acceptance --workspace @web2dkit/signal-relay-example"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

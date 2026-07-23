@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="Signal Relay — a compact deterministic grid infiltration game." />
+    <title>Signal Relay</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">SECTOR 07 · RELAY PROTOCOL</p>
+          <h1>Signal Relay</h1>
+        </div>
+        <button id="pause-button" class="icon-button" type="button" aria-label="Pause game">II</button>
+      </header>
+
+      <section class="mission" aria-labelledby="mission-title">
+        <div>
+          <span class="section-index">01</span>
+          <div>
+            <h2 id="mission-title">Restore the chain</h2>
+            <p>Activate relays A → B → C, then reach the uplink before your energy expires.</p>
+          </div>
+        </div>
+        <div class="relay-progress" id="relay-progress" aria-label="Relay progress"></div>
+      </section>
+
+      <section class="play-layout">
+        <aside class="telemetry" aria-label="Mission telemetry">
+          <div class="metric"><span>Energy</span><strong id="energy-value">18</strong></div>
+          <div class="energy-track" aria-hidden="true"><i id="energy-bar"></i></div>
+          <div class="metric"><span>Score</span><strong id="score-value">0000</strong></div>
+          <div class="metric"><span>Moves</span><strong id="moves-value">00</strong></div>
+          <div class="legend" aria-label="Board legend">
+            <span><i class="legend-mark player-mark"></i>Courier</span>
+            <span><i class="legend-mark relay-mark"></i>Relay</span>
+            <span><i class="legend-mark hazard-mark"></i>Hazard</span>
+            <span><i class="legend-mark charge-mark"></i>Charge</span>
+          </div>
+        </aside>
+
+        <div class="board-frame">
+          <div id="game-board" class="game-board" role="grid" aria-label="Signal Relay tactical grid"></div>
+          <div id="game-overlay" class="game-overlay" aria-live="polite"></div>
+        </div>
+
+        <aside class="briefing" aria-label="Current objective">
+          <p class="eyebrow">LIVE DIRECTIVE</p>
+          <strong id="directive">Initialize the courier</strong>
+          <p id="status-message">Press Enter or select Begin mission.</p>
+          <div class="controls">
+            <span><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> Move</span>
+            <span><kbd>Esc</kbd> Pause</span>
+            <span><kbd>R</kbd> Restart</span>
+          </div>
+        </aside>
+      </section>
+
+      <nav class="touch-controls" aria-label="Touch movement controls">
+        <button type="button" data-direction="up" aria-label="Move up">↑</button>
+        <button type="button" data-direction="left" aria-label="Move left">←</button>
+        <button type="button" data-direction="down" aria-label="Move down">↓</button>
+        <button type="button" data-direction="right" aria-label="Move right">→</button>
+      </nav>
+
+      <footer>
+        <span>Deterministic simulation · Seed <b id="seed-value">1</b></span>
+        <span>Web2DKit official example</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
