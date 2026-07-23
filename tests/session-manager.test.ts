@@ -12,6 +12,11 @@ beforeAll(async () => {
   const html = await readFile(path.resolve("examples/bridge-demo/index.html"));
   const script = await readFile(path.resolve("examples/bridge-demo/game.js"));
   server = createServer((request, response) => {
+    if (request.url === "/plain") {
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end("<!doctype html><title>Plain game page</title><button>Play</button>");
+      return;
+    }
     if (request.url === "/game.js") {
       response.writeHead(200, { "content-type": "text/javascript" });
       response.end(script);
@@ -32,12 +37,19 @@ afterAll(async () => {
 });
 
 describe("controlled gameplay session", () => {
+  it("starts a page without requiring the optional game bridge", async () => {
+    const started = await sessions.start({ url: `${baseUrl}/plain`, seed: 42 });
+
+    expect(started).toMatchObject({ seed: 42, bridge: null, title: "Plain game page" });
+    await sessions.stop(started.sessionId);
+  });
+
   it("observes, acts, replays, and checks a bridge-enabled game", async () => {
     const started = await sessions.start({ url: baseUrl, seed: 42 });
     expect(started.bridge?.protocolVersion).toBe("1");
 
     const initial = await sessions.observe(started.sessionId);
-    expect(initial.state).toMatchObject({ player: { x: 1, y: 1 }, moves: 0 });
+    expect(initial.state).toMatchObject({ seed: 42, player: { x: 1, y: 1 }, moves: 0 });
 
     const progress: number[] = [];
     const result = await sessions.runScenario(started.sessionId, {

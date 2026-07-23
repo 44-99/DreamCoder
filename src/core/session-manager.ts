@@ -97,13 +97,20 @@ export class SessionManager {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
       const id = randomUUID();
       const session: ManagedSession = { id, browser, context, page, url, seed, diagnostics };
+      const bridge = await this.describeBridge(session);
+      if (bridge) {
+        await page.evaluate(async (initialSeed) => {
+          await window.__WEB2D_GAME__?.reset({ seed: initialSeed });
+        }, seed);
+      }
+      const title = await page.title();
       this.sessions.set(id, session);
       return {
         sessionId: id,
         url,
         seed,
-        bridge: await this.describeBridge(session),
-        title: await page.title()
+        bridge,
+        title
       };
     } catch (error) {
       await browser.close();
