@@ -1,66 +1,21 @@
-# Python
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.coverage
-
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
-
-# Database
 *.db
-*.sqlite
-*.sqlite3
-
-# Redis
-dump.rdb
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
+*.sqlite*
+.env
+.env.*
+!.env.example
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Generated projects
-backend/generated_projects/*
-!backend/generated_projects/.gitkeep
-backend/static/projects/*
-!backend/static/projects/.gitkeep
-
-# ChromaDB data
-backend/data/chroma_db/*
-!backend/data/chroma_db/.gitkeep
-
-# Frontend dist
-frontend/dist/
-
-*.sql
-backend/static/avatar/*
+.idea/
+.vscode/
+.npm-install-broken/
+.scaffold/
+.validation-deps/
+backend/static/projects/
+backend/generated_projects/

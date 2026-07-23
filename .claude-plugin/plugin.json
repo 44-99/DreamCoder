@@ -1,0 +1,10 @@
+{
+  "name": "web2dkit",
+  "version": "0.1.0",
+  "description": "MCP tools and Agent Skills for building, playtesting, and debugging browser-native 2D games.",
+  "author": { "name": "44-99", "url": "https://github.com/44-99" },
+  "homepage": "https://github.com/44-99/Web2DKit",
+  "repository": "https://github.com/44-99/Web2DKit",
+  "license": "MIT",
+  "keywords": ["web-2d", "game-development", "mcp", "agent-skills", "playtesting"]
+}

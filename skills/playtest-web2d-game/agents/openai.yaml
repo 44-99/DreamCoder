@@ -1,0 +1,10 @@
+interface:
+  display_name: "Playtest Web 2D Game"
+  short_description: "Playtest Web 2D behavior with evidence"
+  default_prompt: "Use $playtest-web2d-game to run deterministic gameplay checks and report failures."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "web2dkit"
+      description: "Structured Web 2D game inspection and playtesting tools"
+      transport: "stdio"

@@ -1,0 +1,10 @@
+interface:
+  display_name: "Debug Web 2D Game"
+  short_description: "Reproduce and debug Web 2D game bugs"
+  default_prompt: "Use $debug-web2d-game to reproduce this game bug and add a regression scenario."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "web2dkit"
+      description: "Structured Web 2D game inspection and playtesting tools"
+      transport: "stdio"

@@ -1,57 +1,51 @@
 name: Bug report / 缺陷报告
-description: Report a reproducible problem in DreamCoder / 报告可复现问题
+description: Report a reproducible Web2DKit tool, Bridge, Skill, or adapter problem
 title: "[Bug]: "
 labels: [bug]
 body:
-  - type: markdown
-    attributes:
-      value: Thanks for helping improve DreamCoder. Please remove secrets from logs before submitting.
-  - type: textarea
-    id: description
-    attributes:
-      label: Problem / 问题描述
-      description: What happened, and what did you expect instead?
-    validations:
-      required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: Reproduction / 复现步骤
-      placeholder: |
-        1. Start ...
-        2. Enter ...
-        3. Observe ...
-    validations:
-      required: true
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs or screenshots / 日志或截图
-      description: Remove API keys, tokens, email addresses, and other private data.
-      render: shell
-  - type: input
-    id: commit
-    attributes:
-      label: DreamCoder commit
-      placeholder: git rev-parse --short HEAD
   - type: dropdown
-    id: os
+    id: boundary
     attributes:
-      label: Operating system / 操作系统
+      label: Affected boundary
       options:
-        - Windows
-        - macOS
-        - Linux
-        - Other
+        - MCP server or tool
+        - Game Bridge
+        - Codex plugin
+        - Claude Code plugin
+        - Agent Skill
+        - Framework adapter
+        - Documentation or installation
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected game or tool behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the seed, actions, assertions, and first failing step when available. Remove secrets and proprietary assets.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Structured output and diagnostics
+      description: Paste the MCP error envelope, state subset, or runtime diagnostics. Screenshots alone are not sufficient for rule defects.
+      render: json
+  - type: input
+    id: version
+    attributes:
+      label: Web2DKit version or commit
     validations:
       required: true
   - type: input
-    id: runtime
+    id: environment
     attributes:
-      label: Runtime versions / 运行时版本
-      placeholder: Python 3.11.x, Node 22.x
-  - type: input
-    id: provider
-    attributes:
-      label: LLM provider and model
-      placeholder: DeepSeek / deepseek-v4-flash
+      label: Host, Node.js, OS, and game stack
+      placeholder: Codex, Node 22.x, Windows 11, Phaser 3.x
+    validations:
+      required: true

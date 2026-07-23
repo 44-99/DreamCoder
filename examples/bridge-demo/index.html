@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web2DKit Bridge Demo</title>
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101827; color: #e5f0ff; font-family: system-ui, sans-serif; }
+      main { text-align: center; }
+      canvas { border: 1px solid #456; background: #172339; image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Bridge Demo</h1>
+      <canvas id="game" width="320" height="240" aria-label="A deterministic movement grid"></canvas>
+      <p>Use the arrow keys. Web2DKit can observe the same state the game uses.</p>
+    </main>
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>

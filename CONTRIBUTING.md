@@ -1,66 +1,44 @@
-# Contributing to DreamCoder / 参与贡献
+# Contributing to Web2DKit / 参与贡献
 
-感谢你愿意改进 DreamCoder。最有价值的贡献是可复现的生成失败、可玩的示例游戏、provider 兼容性修复、安全改进和跨平台 Quickstart 反馈。
+High-value contributions make a real Web 2D workflow more observable, deterministic, or reproducible. Useful examples include a framework adapter backed by a sample game, a saved regression scenario, a lifecycle bug reproduction, or a clearer failure message.
 
-Thanks for contributing. High-value contributions include reproducible generation failures, playable examples, provider compatibility fixes, security improvements, and cross-platform quickstart feedback.
+高价值贡献应当让真实 Web 2D 工作流更容易观测、确定性复现或验证，例如带示例项目的框架适配器、回归场景、生命周期缺陷复现或更清晰的错误信息。
 
-## 开始之前 / Before you start
+## Before you start
 
-- Bug 或设计建议请先创建 Issue，说明用户问题和复现条件。
-- 安全漏洞请使用 GitHub Private Vulnerability Reporting，不要公开披露。
-- 不要在 Issue、日志、截图或测试中提交 API Key、Token 或个人信息。
+- Open an Issue for design changes and describe the developer problem before proposing a dependency.
+- Keep the core browser-native and host-neutral. Do not add model providers, chat UI, arbitrary shell tools, databases, or 3D engine workflows.
+- Report vulnerabilities privately and remove tokens, personal data, and proprietary game assets from reproductions.
 
-Open an issue for bugs or design proposals. Report vulnerabilities privately, and never include API keys, tokens, or personal data in issues, logs, screenshots, or tests.
+## Local development
 
-## 本地开发 / Local development
-
-环境要求：Python 3.11+、Node.js 20.19+ 或 22.12+。
+Requires Node.js 22+:
 
 ```bash
-git clone https://github.com/44-99/DreamCoder.git
-cd DreamCoder
-```
-
-后端：
-
-```bash
-cd backend
-python -m venv .venv
-# macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m unittest discover -s tests -v
-```
-
-前端：
-
-```bash
-cd frontend
 npm ci
-npm run build
+npx playwright install chromium
+npm run validate
 ```
 
-代码检查：
+The validation command type-checks, runs unit and Chromium integration tests, and builds the MCP server.
+
+Validate plugin and Skill metadata before submitting:
 
 ```bash
-ruff check backend
+python /path/to/plugin-creator/scripts/validate_plugin.py .
+python /path/to/skill-creator/scripts/quick_validate.py skills/build-web2d-game
+python /path/to/skill-creator/scripts/quick_validate.py skills/playtest-web2d-game
+python /path/to/skill-creator/scripts/quick_validate.py skills/debug-web2d-game
 ```
 
-## Pull Request
+## Pull requests
 
-1. 每个 PR 只解决一个清晰问题。
-2. 行为变化必须补测试；UI 变化必须附截图。
-3. 不要顺便格式化或重构无关文件。
-4. 确保 CI 通过，并在 PR 中说明实际验证命令。
-5. 提交信息建议使用 `feat:`、`fix:`、`docs:`、`test:`、`refactor:` 或 `chore:` 前缀。
+1. Keep one user problem per PR.
+2. Add a failing test or reproducible scenario before changing behavior when practical.
+3. Preserve MCP input bounds and the `WEB2DKIT_ROOT` boundary.
+4. Document protocol changes and keep v1 additions backward-compatible.
+5. Report the exact commands and real-browser checks you ran.
 
-Keep each PR focused, add tests for behavior changes, include screenshots for UI changes, avoid unrelated rewrites, and report the commands you actually ran.
+Good first issues include additional project-stack detection, Bridge examples for different game genres, assertion error improvements, cross-platform installation checks, and framework adapter design backed by a minimal working game.
 
-## Good first contributions
-
-- 为现有 provider 增加不调用真实 API 的配置测试；
-- 提交一个单文件 HTML/CSS/JavaScript 示例游戏；
-- 补充 Windows、macOS 或 Linux 的安装故障排查；
-- 改进错误提示、无障碍标签或文档链接。
-
-提交 PR 即表示你同意按项目的 [MIT License](./LICENSE) 授权你的贡献。
+Contributions are licensed under the project's [MIT License](./LICENSE).

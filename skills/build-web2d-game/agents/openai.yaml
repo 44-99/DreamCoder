@@ -1,0 +1,10 @@
+interface:
+  display_name: "Build Web 2D Game"
+  short_description: "Build browser-native 2D games reliably"
+  default_prompt: "Use $build-web2d-game to implement and verify this browser-native 2D game."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "web2dkit"
+      description: "Structured Web 2D game inspection and playtesting tools"
+      transport: "stdio"

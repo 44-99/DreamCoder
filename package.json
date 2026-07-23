@@ -1,0 +1,67 @@
+{
+  "name": "web2dkit",
+  "version": "0.1.0",
+  "description": "MCP tools and Agent Skills for building, playtesting, and debugging browser-native 2D games.",
+  "type": "module",
+  "license": "MIT",
+  "author": "44-99",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/44-99/Web2DKit.git"
+  },
+  "homepage": "https://github.com/44-99/Web2DKit#readme",
+  "bugs": {
+    "url": "https://github.com/44-99/Web2DKit/issues"
+  },
+  "keywords": [
+    "mcp",
+    "agent-skills",
+    "web-game",
+    "2d-game",
+    "playtesting",
+    "phaser",
+    "pixijs",
+    "codex",
+    "claude-code"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "skills",
+    ".codex-plugin",
+    ".claude-plugin",
+    ".mcp.json",
+    "README.md",
+    "README_EN.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "web2dkit-mcp": "dist/server.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./bridge": "./dist/bridge/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate": "npm run check && npm test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "playwright": "^1.61.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

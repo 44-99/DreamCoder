@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "web2dkit": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/server.js"],
+      "env": {
+        "WEB2DKIT_ROOT": "${CLAUDE_PROJECT_DIR}"
+      }
+    }
+  }
+}

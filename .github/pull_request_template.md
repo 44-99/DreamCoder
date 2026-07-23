@@ -1,18 +1,18 @@
-## What changed / 改了什么
+## Developer problem
 
-<!-- Describe the user-visible or architectural change. -->
+<!-- What Web 2D workflow becomes more observable, deterministic, or reliable? -->
 
-## Why / 为什么
+## What changed
 
-<!-- Link an issue or explain the problem being solved. -->
+<!-- Keep host-agent, Skill, MCP, Bridge, and game boundaries explicit. -->
 
-## Verification / 验证
+## Verification
 
-- [ ] Backend tests: `python -m unittest discover -s backend/tests -v`
-- [ ] Backend lint: `ruff check backend`
-- [ ] Frontend build: `cd frontend && npm run build`
-- [ ] Documentation updated when behavior changed
+- [ ] `npm run validate`
+- [ ] Real Chromium scenario added or updated when runtime behavior changed
+- [ ] MCP schemas and filesystem/action bounds preserved
+- [ ] Bridge or user documentation updated when contracts changed
 
-## Screenshots / 截图
+## Evidence
 
-<!-- Required for visible UI changes. Remove this section when not applicable. -->
+<!-- Include the scenario, seed, assertions, and before/after result. Screenshots are supplemental. -->

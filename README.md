@@ -1,131 +1,96 @@
 <p align="right">
-  <strong>简体中文</strong> · <a href="./README_EN.md">English</a>
+  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
 <div align="center">
-  <img src="./docs/assets/dreamcoder-logo.svg" alt="DreamCoder logo" width="96" />
-  <h1>DreamCoder</h1>
-  <p><strong>用自然语言生成、继续修改并预览可运行的 Web 小游戏。</strong></p>
-  <p>面向 AI 应用开发者与学习者的开源、自托管参考项目。</p>
+  <img src="./docs/assets/web2dkit-logo.svg" alt="Web2DKit logo" width="96" />
+  <h1>Web2DKit</h1>
+  <p><strong>MCP tools and Agent Skills for building, playtesting, and debugging browser-native 2D games.</strong></p>
+  <p>Give Codex, Claude Code, and other MCP-compatible coding agents structured game state—not another prompt wrapper.</p>
 
-  [![CI](https://github.com/44-99/DreamCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/44-99/DreamCoder/actions/workflows/ci.yml)
+  [![CI](https://github.com/44-99/Web2DKit/actions/workflows/ci.yml/badge.svg)](https://github.com/44-99/Web2DKit/actions/workflows/ci.yml)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-  [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
-  [![Vue](https://img.shields.io/badge/Vue-3-42b883.svg?logo=vue.js&logoColor=white)](https://vuejs.org/)
+  [![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
 </div>
 
-![DreamCoder 可玩示例画廊](./docs/assets/examples-gallery.png)
+## Why Web2DKit?
 
-> 截图中的三个游戏是可离线运行的确定性示例，用于展示目标产物和视觉验收；它们不代表某个模型的固定生成质量。
+Coding agents can already write game code, edit files, run commands, and inspect screenshots. The missing layer is **game semantics**: what scene is active, whether a collision changed health correctly, which step broke a rule, and whether the same input can reproduce the failure.
 
-## 它解决什么问题？
+Web2DKit adds that layer through a small Game Bridge and bounded MCP tools:
 
-很多 LLM 教程停在“一问一答”。DreamCoder 展示一条更完整的工程链路：
+```text
+request → coding agent → source changes
+                         ↓
+          Web2DKit Skill workflow
+                         ↓
+fixed seed → actions → structured state → assertions → regression scenario
+```
 
-**描述需求 → 工作流生成文件 → 安全校验 → 浏览器预览 → 基于现有文件继续修改**
+## What works today
 
-它适合想研究 FastAPI、Vue 3、LangGraph、结构化生成和生成式 UI 的开发者、学生与技术作者。当前项目不是成熟的通用 AI IDE，也不是面向非技术用户的托管 SaaS。
+- Inspect a Web 2D project without escaping its configured filesystem root.
+- Start a controlled Playwright session with a fixed random seed.
+- Read JSON-serializable scenes, entities, rules, score, and metrics through the Game Bridge.
+- Perform bounded keyboard, pointer, wait/frame-step, and semantic bridge actions.
+- Run deterministic scenarios with step and final assertions.
+- Report runtime errors, failed resources, bridge readiness, and render-surface health.
+- Guide agents with three operational Skills: build, playtest, and debug.
+- Load as a Codex plugin or Claude Code plugin from the same repository.
 
-## 核心能力
+Web2DKit does **not** provide chat history, model routing, arbitrary shell execution, generic file editing, or a replacement web IDE. The host coding agent already owns those capabilities.
 
-- **生成结果可试玩**：查看生成的 HTML/CSS/JavaScript 源码并直接预览。
-- **支持连续修改**：后续需求会带上项目已有文件，不会退化成重新生成。
-- **生命周期可测试**：项目状态、事务、步骤日志和失败收尾由 Generation Run module 统一管理。
-- **默认本地优先**：SQLite 与进程内验证码即可启动；Docker、PostgreSQL、Redis 均非必需。
-- **生成内容按不可信输入处理**：包含路径、文件数量、入口文件、CSP 与 iframe sandbox 约束。
+## Scope
 
-## 十分钟启动
+Web2DKit targets browser-native 2D games built with HTML/CSS/DOM, Canvas 2D, SVG, Web Audio, or WebGL-based 2D rendering. Vanilla JavaScript/TypeScript and lightweight frameworks such as Phaser, PixiJS, Kaboom, and Excalibur fit this boundary.
 
-需要 Python 3.11+、Node.js 20.19+ 或 22.12+，以及一个 DeepSeek、OpenAI 或 Qwen API Key。
+Unity WebGL, Unreal Engine, Godot, Three.js 3D scenes, and editor-dependent engine pipelines are intentionally out of scope.
+
+The v0.1 bridge is framework-neutral. Project detection covers common Web 2D stacks; deeper Phaser and PixiJS adapters are planned, not claimed as complete.
+
+## Verify it locally
+
+Requires Node.js 22+.
 
 ```bash
-git clone https://github.com/44-99/DreamCoder.git
-cd DreamCoder
-cp backend/.env.example backend/.env  # PowerShell: Copy-Item backend/.env.example backend/.env
+git clone https://github.com/44-99/Web2DKit.git
+cd Web2DKit
+npm ci
+npx playwright install chromium
+npm run validate
 ```
 
-编辑 `backend/.env`，至少填写所选 provider 的 Key。默认示例使用 DeepSeek：
+This runs unit tests plus a real Chromium scenario against the included [Bridge demo](./examples/bridge-demo/).
 
-```env
-LLM_PROVIDER=deepseek
-DEEPSEEK_API_KEY=your-key
+For local plugin installation and first use, follow [Getting started](./docs/getting-started.md).
+
+## Game Bridge in one minute
+
+Expose the authoritative state already owned by your game:
+
+```js
+window.__WEB2D_GAME__ = {
+  describe: () => ({ protocolVersion: "1", name: "my-game" }),
+  getState: () => structuredClone(gameState),
+  reset: ({ seed } = {}) => resetGame(seed ?? 1),
+  dispatch: ({ name, payload }) => dispatchGameAction(name, payload)
+};
 ```
 
-终端 1：
+Then an agent can prove a rule with `web2d_session_start` → `web2d_observe` → `web2d_scenario_run`, instead of guessing from pixels. See the [Bridge protocol](./docs/bridge-protocol.md) and [MCP tool reference](./docs/mcp-tools.md).
 
-```bash
-cd backend
-python -m venv .venv
-# macOS/Linux: source .venv/bin/activate
-# Windows PowerShell: .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+## Documentation
 
-终端 2：
+- [Getting started](./docs/getting-started.md)
+- [Architecture](./docs/architecture.md)
+- [Game Bridge protocol](./docs/bridge-protocol.md)
+- [MCP tools](./docs/mcp-tools.md)
+- [Security boundaries](./docs/security.md)
+- [Roadmap](./ROADMAP.md)
+- [Contributing](./CONTRIBUTING.md)
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Status
 
-打开 <http://localhost:5173>，注册并输入：
+Web2DKit is an early, working foundation. The included browser integration test proves the core state/action/assertion loop, but the project still needs real-world adapters, saved scenario files, performance budgets, and feedback from 2D game developers before a stable release.
 
-> 生成一个复古像素风贪吃蛇游戏，支持方向键控制、计分、暂停和重新开始。
-
-开发模式会在本机生成并自动填入一次性验证码。完整的跨平台步骤、成功检查点和故障排查见[入门指南](./docs/getting-started.md)。
-
-## 不用模型 Key 先试玩
-
-```bash
-python -m http.server 4173
-```
-
-访问 <http://localhost:4173/examples/>：
-
-- [Neon Snake](./examples/neon-snake/index.html)
-- [Prism Breakout](./examples/prism-breakout/index.html)
-- [Orbit Dodge](./examples/orbit-dodge/index.html)
-
-## 架构
-
-```mermaid
-flowchart LR
-    U["自然语言需求"] --> V["Vue 工作区"]
-    V --> A["FastAPI route adapter"]
-    A --> R["Generation Run module"]
-    R --> W["LangGraph 工作流"]
-    W --> L["LLM provider"]
-    W --> F["Generated Artifact module"]
-    F --> P["源码与隔离预览"]
-    R --> D[("SQLite 默认")]
-```
-
-本地启动只依赖 Python、Node.js、SQLite 和一个模型 provider。PostgreSQL、Redis、ChromaDB 与 Docker Compose 是托管或实验场景的可选 adapter，不是为了“堆技术栈”的前置要求。
-
-## 文档
-
-| 目标 | 中文 | English |
-|---|---|---|
-| 从零跑通 | [入门指南](./docs/getting-started.md) | [Getting started](./docs/getting-started.en.md) |
-| 理解设计 | [架构说明](./docs/architecture.md) | [Architecture](./docs/architecture.en.md) |
-| 托管部署 | [部署指南](./docs/deployment.md) | [Deployment](./docs/deployment.en.md) |
-| 安全边界 | [安全说明](./docs/security.md) | [Security](./docs/security.en.md) |
-| 参与开发 | [贡献指南](./CONTRIBUTING.md) | [Contributing](./CONTRIBUTING.md) |
-| 后续计划 | [Roadmap](./ROADMAP.md) | [Roadmap](./ROADMAP.md) |
-
-模型变量与可覆盖的默认 ID 见 [`backend/.env.example`](./backend/.env.example)。模型名称会演进，使用前请以 provider 官方目录为准。
-
-## 当前边界
-
-- 主要生成 HTML/CSS/JavaScript 浏览器小游戏。
-- 代码验证仍是启发式检查，不等于浏览器自动化测试或安全审计。
-- SSE 当前返回工作流步骤日志，不是 token 级实时流。
-- 公开部署需要外部验证码渠道、强 `SECRET_KEY`、显式 `CORS_ALLOWED_ORIGINS`，以及更强的预览隔离。
-
-## 贡献与许可
-
-欢迎提交可复现的生成失败、示例游戏、provider 兼容性修复和安全改进。请先阅读[贡献指南](./CONTRIBUTING.md)。
-
-DreamCoder 使用 [MIT License](./LICENSE)。
+Web2DKit is available under the [MIT License](./LICENSE).

@@ -4,95 +4,96 @@ Last updated: 2026-07-23
 
 ## Product Overview
 
-- **Product**: DreamCoder
-- **Repository positioning**: 面向 AI 应用开发者与学习者的开源、自托管 Web 游戏生成工作台和参考实现。
-- **One-liner**: 用自然语言生成、继续修改并预览可运行的 HTML/CSS/JavaScript 小游戏，同时展示一个完整 AI 应用如何组织工作流、项目状态和生成产物。
-- **Category**: 开源 AI 应用、开发者示例项目、自托管 Web 应用；当前不是成熟 SaaS，也不是通用 AI IDE。
-- **Core technology**: Python/FastAPI、Vue 3、LLM provider、可选 LangGraph、SQLAlchemy。
-- **Model**: MIT 开源项目；用户自行提供模型凭据。
+- **Product**: Web2DKit
+- **One-liner**: Help developers using coding agents build, playtest, and debug browser-native 2D games with structured state and deterministic scenarios instead of relying on screenshots alone.
+- **Category**: Open-source developer tool; MCP server, runtime bridge, and Agent Skills plugin.
+- **Core technology**: TypeScript/Node.js, official MCP SDK, Playwright, JSON schemas, framework-neutral browser Game Bridge.
+- **Supported boundary**: HTML/CSS/DOM, Canvas, SVG, Web Audio, WebGL-2D, vanilla JS/TS and lightweight 2D frameworks. No Unity, Unreal, Godot, Three.js 3D, or editor-dependent pipelines.
+- **Model**: MIT licensed, local-first, no hosted account or model key.
 
 ## Developer Persona
 
 ### Primary
 
-- 中国开发者社区中的初级到中级全栈、Python 或 AI 应用开发者。
-- 正在学习 LLM 应用工程，希望看到比聊天机器人更完整、但仍可理解和改造的项目。
-- 常用 Python、Vue/JavaScript、FastAPI，对 LangChain/LangGraph、Agent、结构化输出、SSE 和生成式 UI 感兴趣。
-- 可能是个人开发者、学生、求职作品集作者、小型团队原型开发者。
-- 自己决定是否 clone、部署和改造项目，不是企业采购者。
+- Solo and small-team 2D game developers already using Codex, Claude Code, or another MCP-compatible coding agent.
+- Comfortable with JavaScript/TypeScript and browser tooling; may use Phaser, PixiJS, Kaboom, Excalibur, React, Vue, or custom Canvas code.
+- Wants an agent to do more than generate a prototype: reproduce gameplay bugs, verify rules, and prevent regressions.
+- Personally chooses and installs development tools; no enterprise purchase is required.
 
 ### Secondary
 
-- 教师、培训内容作者和技术博主：需要一个可演示的 AI 应用案例。
-- Hackathon 和独立开发者：需要快速生成或验证浏览器小游戏原型。
-- 非技术游戏创作者是潜在最终用户，但在安装、模型密钥和托管体验简化前，不应作为仓库的首要受众。
+- Game-jam participants who need fast but repeatable browser-game iteration.
+- Framework maintainers and test-infrastructure contributors building reusable adapters.
+- Educators teaching game loops, state models, deterministic simulation, or agent-assisted development.
+
+Non-technical creators are not the primary audience until installation and Bridge integration require substantially less developer work.
 
 ## Where They Hang Out
 
-- 中文：CSDN、掘金、知乎、哔哩哔哩、微信公众号、V2EX、GitHub 中文社区。
-- 国际：GitHub、Dev.to、Hashnode、Hacker News、Reddit 的 LocalLLaMA、webdev、gamedev 社区。
-- 搜索主题：AI 项目实战、LangGraph 实战、自然语言生成游戏、FastAPI + Vue、DeepSeek 接入、生成代码预览。
-- GitHub topics：`ai-game-generator`、`langgraph`、`fastapi`、`vue3`、`llm-app`、`code-generation`、`html5-game`、`self-hosted`。
+- GitHub, npm, MCP and Agent Skills communities.
+- Phaser, PixiJS, HTML5 game development, webdev, indie game, and game-jam Discord/Reddit communities.
+- CSDN, 掘金, 知乎, 哔哩哔哩, V2EX, GitHub 中文社区.
+- Search terms: `MCP game development`, `Claude Code game testing`, `Codex 2D game`, `AI game playtesting`, `Phaser automated testing`, `Canvas game testing`, `deterministic game replay`, `游戏开发 MCP`, `AI 编程 Agent 2D 游戏`.
 
 ## Problems & Pain Points
 
-- 教程常停留在单轮聊天，缺少项目状态、多轮修改、生成文件、预览和错误收尾的完整案例。
-- 通用 AI 编程工具可用但实现不可见，不适合学习生成流程如何落地。
-- 从零组合 LLM、工作流、数据库、SSE 和前端预览成本高，容易在生命周期和安全细节上踩坑。
-- 想做一个可展示、可试玩的 AI 项目，而不是又一个聊天机器人。
-- 待验证的原话假设："有没有一个能跑起来的 LangGraph 完整项目？"、"我想用自然语言生成一个可以直接玩的网页小游戏。"
+- A coding agent sees rendered pixels but cannot reliably explain the game's logical state.
+- Browser automation can click coordinates but cannot prove game rules changed correctly.
+- Timing and randomness make gameplay failures difficult to reproduce.
+- Generated games often stop at “it runs” without control, lifecycle, win/loss, and regression verification.
+- Each agent session rediscovers how to start, observe, and test the same game.
+- Existing test tools require game developers to invent their own state bridge and scenario format.
 
 ## Current Alternatives
 
-- **通用生成工具**：Replit Agent、Bolt、Lovable、Cursor；体验成熟，但通常不是游戏专用的开源参考实现。
-- **游戏生成/创作工具**：Rosebud AI、GDevelop 等；更偏最终创作者体验，学习底层 AI 应用架构的空间有限。
-- **DIY**：把 LangChain/LangGraph 教程、FastAPI、Vue 和数据库自行拼接；自由但耗时。
-- **传统模板**：直接下载 HTML5 游戏模板再手工修改；稳定但缺少自然语言迭代。
+- **Generic coding agents**: strong at code changes, weak at structured gameplay observation unless the project builds custom infrastructure.
+- **Playwright/Cypress scripts**: reliable browser automation, but developers must design game semantics, deterministic reset, and domain assertions themselves.
+- **Screenshots or visual agents**: useful for appearance, insufficient for hidden state and rule correctness.
+- **Engine-specific test systems**: useful inside their engine, outside this browser-native and cross-agent scope.
+- **DIY debug globals**: quick for one project, inconsistent across projects and agent sessions.
 
 ## Key Differentiators
 
-- 可查看和修改的开源完整应用，而不是黑盒在线生成器。
-- 以小游戏作为可视、可试玩的生成产物，比普通文本聊天更容易理解与演示。
-- 覆盖“描述 → 生成 → 文件 → 预览 → 继续修改”的项目生命周期。
-- 可自托管并可替换模型 provider。
-- 差异化必须用可运行 demo、测试和限制说明证明；暂不把 MCP、成熟 RAG、自动代码审查或未经验证的性能数字作为卖点。
+- Framework-neutral Game Bridge rather than a genre template or prompt collection.
+- Same MCP server and Skill workflow across supported coding agents.
+- Structured state, fixed seed, semantic actions, and exact failing-step assertions in one loop.
+- No duplicate chat UI, LLM integration, generic file tools, arbitrary shell, database, or Docker requirement.
+- Claims must be demonstrated by integration tests and real project adapters.
 
 ## Verbatim Developer Language
 
-当前没有真实用户访谈或 Issue 数据，以下只是需要通过评论、Issue 和搜索数据验证的候选表达：
+These are hypotheses to validate through Issues and interviews, not testimonials:
 
-- "LangGraph 有没有不是玩具聊天机器人的项目？"
-- "DeepSeek 怎么接到 FastAPI + Vue 项目里？"
-- "AI 生成的 HTML/CSS/JS 怎么实时预览？"
-- "为什么继续生成把原来的代码覆盖了？"
-- "这个项目不装 Docker 能不能跑？"
+- “The agent made the game run, but it doesn't actually understand the rules.”
+- “A screenshot can't tell me why the collision failed.”
+- “This bug only happens sometimes after restarting the level.”
+- “I don't want another game generator; I want my coding agent to test the game it wrote.”
+- “How do I make Claude Code or Codex actually play a Phaser game?”
 
 ## Technical Trust Signals
 
-- 已有：可复制的 quickstart、CI、自动测试、三款离线示例、MIT 许可证、公开限制、安全说明、架构图、贡献指南、GitHub Description/Website/Topics。
-- 发布前仍需：一次真实 provider 的“生成 + 继续修改”演示、版本化 `v0.1.0` release。
-- 当前基线（2026-07-23）：GitHub 1 star、0 fork、尚无公开 Release；不能用采用量作为主要信任信号。
-- 近期最有价值的证明：10 分钟内首次生成成功、示例项目、测试通过、真实问题复盘。
+- Current: MIT license, bounded MCP schemas, no arbitrary shell tool, fail-closed project root, real Chromium integration test, documented Bridge contract, explicit limitations.
+- Required before stable release: three real-genre integrations, adapter conformance tests, cross-platform host installation verification, versioned prerelease, public issue feedback.
+- Do not use stars, users, compatibility, or performance numbers as proof until measured.
 
 ## Conversion Actions
 
-- **Awareness**: 阅读技术文章或观看 demo；访问 GitHub。
-- **Consideration**: 看完 README 首屏、架构图与限制；star 或收藏。
-- **Trial**: clone；仅配置一个 LLM key；在 10 分钟内生成第一个可玩的 Web 游戏。
-- **Activation**: 对已有游戏提出一次修改，预览仍保留原功能并加入新功能。
-- **Community**: 提交 Issue、Discussion、示例游戏或第一个 PR。
+- **Awareness**: Understand the difference between visual inspection and game-state verification; visit the repository.
+- **Consideration**: Read the scope, inspect the tool schemas and integration test, star or watch the repository.
+- **Trial**: Install Chromium, start the included Bridge demo, and complete one deterministic scenario.
+- **Activation**: Add the Bridge to a real game and preserve one actual bug as a passing regression scenario.
+- **Community**: Submit an adapter, scenario, failure report, or developer interview finding.
 
 ## Voice & Tone
 
-- 中文优先、可逐步提供英文版本。
-- 友好、直接、技术可信、builder-first。
-- 先展示能运行的结果，再解释实现。
-- 主动说明限制和权衡；避免“企业级”“革命性”“90% 成功率”等无证据宣传。
-- 内容以实际代码、命令、输出、截图和失败复盘为核心。
+- Direct, technical, evidence-first, and respectful of existing agent capabilities.
+- Lead with a reproducible developer outcome, then explain the protocol and tradeoffs.
+- Avoid “AI game generator”, “one click”, “revolutionary”, “supports every framework”, or unmeasured success claims.
+- Use English by default on GitHub for global discovery, with first-class Chinese README and Chinese technical content for domestic channels.
 
 ## Validation Queue
 
-- 采访或收集至少 10 位目标开发者的实际问题。
-- 从 CSDN、GitHub Issues、搜索联想和视频评论中记录原话。
-- 测量从 README 到 clone、从 clone 到首次成功生成的漏斗。
-- 根据反馈验证主要价值究竟是“学习完整 AI 应用”还是“快速制作小游戏”。
+- Interview at least ten browser 2D developers using coding agents.
+- Integrate one puzzle/strategy game, one action/platform game, and one narrative/simulation game.
+- Measure time from clone to first observed state and from bug report to saved scenario.
+- Record exact search language from Issues, CSDN comments, Reddit, Discord, and video comments.
