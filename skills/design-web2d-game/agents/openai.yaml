@@ -1,0 +1,10 @@
+interface:
+  display_name: "Design Web 2D Game"
+  short_description: "Define a focused, testable Web 2D game"
+  default_prompt: "Use $design-web2d-game to turn this idea into a testable Web 2D game contract."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "web2dkit"
+      description: "Project inspection and structured Web 2D game verification"
+      transport: "stdio"

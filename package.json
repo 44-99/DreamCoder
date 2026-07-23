@@ -1,7 +1,7 @@
 {
   "name": "web2dkit",
   "version": "0.1.0",
-  "description": "MCP tools and Agent Skills for building, playtesting, and debugging browser-native 2D games.",
+  "description": "Game-development Skills and MCP tools for designing, building, playtesting, debugging, and polishing browser-native 2D games with coding agents.",
   "type": "module",
   "license": "MIT",
   "author": "44-99",
@@ -18,6 +18,8 @@
     "agent-skills",
     "web-game",
     "2d-game",
+    "game-development",
+    "game-design",
     "playtesting",
     "phaser",
     "pixijs",
@@ -34,7 +36,7 @@
     ".claude-plugin",
     ".mcp.json",
     "README.md",
-    "README_EN.md",
+    "README.zh-CN.md",
     "LICENSE"
   ],
   "bin": {

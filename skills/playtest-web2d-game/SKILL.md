@@ -1,32 +1,33 @@
 ---
 name: playtest-web2d-game
-description: Playtest browser-native 2D games through deterministic actions, structured state observations, gameplay assertions, and saved regression scenarios. Use when verifying controls, rules, win/loss conditions, pause and focus behavior, scene transitions, collision outcomes, or bug fixes in HTML/Canvas/SVG/WebGL-2D games.
+description: Use when verifying controls, rules, scene transitions, collisions, win/loss paths, restart behavior, HUD readability, responsive layout, or regressions in a browser-native 2D game.
 ---
 
 # Playtest a Web 2D Game
 
-Turn a gameplay claim into a reproducible state transition and explicit assertions.
+Test two independent surfaces: structured gameplay truth and the player's visual experience. A passing screenshot cannot prove rules; passing state assertions cannot prove readability.
 
 ## Workflow
 
-1. Call `web2d_project_inspect` and identify the documented start command, bridge coverage, and test scripts.
-2. Start the game using the host Agent's terminal, then call `web2d_session_start` with a fixed seed.
-3. Call `web2d_observe`. If the bridge is absent or state is incomplete, stop and add the smallest truthful bridge adapter before testing rules.
-4. Write a scenario with one purpose using [references/scenario-design.md](references/scenario-design.md).
-5. Prefer native `key` or `pointer` actions for control wiring. Prefer `bridge` actions for rule-level reproducibility. Use frame waits only when timing is part of the contract.
-6. Run `web2d_scenario_run`. Inspect every failed assertion and the final state; do not retry with random timing until it happens to pass.
-7. Run `web2d_quality_check` and review console, page, and resource failures separately from gameplay correctness.
-8. Re-run the same scenario with the same seed. Treat inconsistent results as a determinism defect.
-9. Stop with `web2d_session_stop` and report the scenario, seed, assertions, result, and untested risks.
+1. Call `web2d_project_inspect` and identify the start command, promised inputs, Bridge coverage, tests, and target viewports.
+2. Start the game with the host Agent's terminal. Call `web2d_session_start` with a fixed seed and representative viewport.
+3. Call `web2d_observe`. Stop if the state omits facts required to distinguish the claim being tested; add the smallest truthful adapter first.
+4. Write one-purpose scenarios using [scenario design](references/scenario-design.md). Cover the main loop first, then failure/restart and changed behavior.
+5. Use native `key` or `pointer` actions to test control wiring. Use `bridge` actions for deterministic domain setup or rule paths. Never let semantic dispatch become a substitute for testing promised controls.
+6. Run `web2d_scenario_run`; inspect the exact failed step, actual value, and final state. Repeat with the same seed to detect uncontrolled time or randomness.
+7. Use the host browser or capture capability for the checks in [visual quality](references/visual-quality.md): first playable screen, action feedback, HUD/playfield balance, overlays, resize, and relevant mobile states.
+8. Call `web2d_quality_check`; review page exceptions, console errors, failed resources, Bridge readiness, and render surface separately.
+9. Stop with `web2d_session_stop`. Report scenarios, seeds, assertions, visual viewports, findings by severity, and untested risks.
 
-## Evidence rules
+## Evidence Rules
 
-- A rendered frame proves appearance only; it does not prove collision, score, health, lifecycle, or victory rules.
-- A lack of exceptions proves only that no captured exception occurred.
-- Every gameplay claim needs an observed initial state, an action sequence, and a final assertion.
-- Keep scenarios short enough that a failure identifies one behavior.
-- Record known nondeterministic systems instead of hiding them with long waits.
+- Every gameplay claim requires observed initial state, actions, and an assertion.
+- Every visual claim requires a representative rendered state at the intended viewport.
+- Keep scenarios short enough that one failure identifies one behavior.
+- Avoid exact floating-point positions, array order, and frame counts unless they are part of the contract.
+- Record nondeterminism instead of masking it with longer waits.
+- Do not add screenshot or generic browser tools to Web2DKit; use the host Agent's existing capability.
 
-## Completion gate
+## Completion Gate
 
-Finish only when the requested rule has a deterministic scenario, the expected state transition passes twice, runtime diagnostics are reviewed, and failures include an exact step and actual value.
+Finish when the requested gameplay path passes twice with the same seed, native controls are exercised where promised, runtime diagnostics are reviewed, and relevant visual states are inspected independently.

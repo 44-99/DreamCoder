@@ -1,0 +1,10 @@
+interface:
+  display_name: "Polish Web 2D Game"
+  short_description: "Improve game feel, UI, assets, and accessibility"
+  default_prompt: "Use $polish-web2d-game to improve this Web 2D game and verify the result."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "web2dkit"
+      description: "Structured regression and runtime quality checks"
+      transport: "stdio"

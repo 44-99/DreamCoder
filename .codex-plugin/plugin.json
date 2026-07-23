@@ -1,28 +1,28 @@
 {
   "name": "web2dkit",
   "version": "0.1.0",
-  "description": "MCP tools and Agent Skills for building, playtesting, and debugging browser-native 2D games.",
+  "description": "Game-development Skills and MCP tools for designing, building, playtesting, debugging, and polishing browser-native 2D games with coding agents.",
   "author": { "name": "44-99", "url": "https://github.com/44-99" },
   "homepage": "https://github.com/44-99/Web2DKit",
   "repository": "https://github.com/44-99/Web2DKit",
   "license": "MIT",
-  "keywords": ["web-2d", "game-development", "mcp", "agent-skills", "playtesting"],
+  "keywords": ["web-2d", "game-development", "game-design", "mcp", "agent-skills", "playtesting"],
   "skills": "./skills/",
   "mcpServers": {
     "web2dkit": { "command": "node", "args": ["${PLUGIN_ROOT}/dist/server.js"] }
   },
   "interface": {
     "displayName": "Web2DKit",
-    "shortDescription": "Build and verify browser-native 2D games",
-    "longDescription": "Give coding agents structured game state, deterministic gameplay scenarios, domain assertions, and repeatable quality checks for browser-native 2D games.",
+    "shortDescription": "Design, build, and verify browser-native 2D games",
+    "longDescription": "Guide coding agents from a focused 2D game contract through implementation, visual polish, deterministic gameplay scenarios, domain assertions, and repeatable quality checks.",
     "developerName": "44-99",
     "category": "Developer Tools",
     "capabilities": ["Read", "Interactive"],
     "websiteURL": "https://github.com/44-99/Web2DKit",
     "defaultPrompt": [
-      "Inspect this Web 2D game and identify the next playable milestone.",
-      "Playtest this game with deterministic state assertions.",
-      "Reproduce this gameplay bug and save a regression scenario."
+      "Turn this idea into a focused Web 2D game contract and first playable slice.",
+      "Build and verify the next complete player loop in this Web 2D game.",
+      "Playtest this game with deterministic state assertions and a separate visual review."
     ],
     "brandColor": "#14B8A6"
   }

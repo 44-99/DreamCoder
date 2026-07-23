@@ -1,54 +1,74 @@
-<p align="right">
-  <a href="./README.md">English</a> · <strong>简体中文</strong>
+<p align="center">
+  <a href="./README.md">English</a> · <a href="./README.zh-CN.md"><strong>简体中文</strong></a>
 </p>
 
 <div align="center">
-  <img src="./docs/assets/web2dkit-logo.svg" alt="Web2DKit logo" width="96" />
+  <img src="./docs/assets/web2dkit-logo.svg" alt="Web2DKit 标志" width="112" />
   <h1>Web2DKit</h1>
-  <p><strong>面向浏览器原生 2D 游戏的 MCP 工具与 Agent Skills。</strong></p>
-  <p>让 Codex、Claude Code 等编程 Agent 真正理解、试玩和验证游戏，而不是再套一层提示词。</p>
+  <p><strong>面向编程 Agent 的 2D 游戏开发能力层。</strong></p>
+  <p>帮助 Codex、Claude Code 等编程 Agent 更高质量、更高效率地制作浏览器原生 2D 游戏——从明确玩法，到可重复试玩与验证。</p>
 
-  [![CI](https://github.com/44-99/Web2DKit/actions/workflows/ci.yml/badge.svg)](https://github.com/44-99/Web2DKit/actions/workflows/ci.yml)
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-  [![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org/)
+  <a href="https://github.com/44-99/Web2DKit/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/44-99/Web2DKit/ci.yml?branch=main&style=flat-square&label=CI" alt="CI 状态" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e?style=flat-square" alt="MIT 许可证" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-22%2B-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 22 或更高版本" /></a>
+  <img src="https://img.shields.io/badge/MCP-compatible-7c3aed?style=flat-square" alt="兼容 MCP" />
+  <img src="https://img.shields.io/badge/Agent_Skills-included-2563eb?style=flat-square" alt="包含 Agent Skills" />
+  <a href="https://github.com/44-99/Web2DKit/stargazers"><img src="https://img.shields.io/github/stars/44-99/Web2DKit?style=flat-square" alt="GitHub Stars" /></a>
+
+  <p>
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#skill-工作流">Skills</a> ·
+    <a href="./docs/mcp-tools.md">MCP 工具</a> ·
+    <a href="./docs/bridge-protocol.md">Game Bridge</a> ·
+    <a href="./ROADMAP.md">Roadmap</a>
+  </p>
 </div>
+
+---
 
 ## 为什么需要 Web2DKit？
 
-编程 Agent 已经能写代码、改文件、运行命令和查看截图，但它通常不知道：当前处于哪个场景、一次碰撞是否正确扣血、哪一步破坏了规则、相同输入能否稳定复现问题。
+编程 Agent 已经能够写代码、运行终端和查看截图，但截图无法证明一次碰撞是否正确扣血、一个谜题是否进入合法状态，或重开关卡后是否清除了所有计时器。
 
-Web2DKit 通过小型 Game Bridge 和受限 MCP 工具补上“游戏语义层”：
+Web2DKit 补上缺失的游戏开发反馈闭环：
+
+| 仅使用编程 Agent | 编程 Agent + Web2DKit |
+|---|---|
+| 根据提示生成若干机制 | 先明确玩家循环、垂直切片和质量标准 |
+| 从画面猜测隐藏状态 | 读取场景、实体、目标和生命周期等结构化状态 |
+| 点击坐标并依赖等待 | 使用受限的原生输入和游戏语义动作 |
+| 页面能运行就结束 | 通过固定种子和显式断言证明游戏规则 |
+| 下一次会话重新摸索流程 | 通过 Skills 重放短小的回归场景 |
 
 ```text
-需求 → 编程 Agent → 修改源码
-                    ↓
-           Web2DKit Skill 工作流
-                    ↓
-固定 seed → 执行动作 → 读取结构化状态 → 规则断言 → 回归场景
+游戏想法 → 设计 Skill → 编程 Agent 修改游戏
+                              ↓
+视觉检查 ← Game Bridge ← MCP 动作、观察和断言
+    └────────────────── 继续迭代 ──────────────────┘
 ```
 
-## 当前已经能做什么
+Web2DKit 不替代编程 Agent、浏览器、终端或渲染器，而是让它们使用同一套可测试的 2D 游戏规则语言。
 
-- 在配置的项目根目录内识别 Web 2D 技术栈、入口、脚本和 Bridge 覆盖情况。
-- 使用固定随机种子启动受控 Playwright 游戏会话。
-- 通过 Game Bridge 读取场景、实体、规则、得分和指标等 JSON 状态。
-- 执行受限的键盘、指针、等待/逻辑帧和语义动作。
-- 运行包含逐步断言与最终断言的确定性场景。
-- 检查运行时异常、资源加载失败、Bridge 状态和渲染/交互表面。
-- 提供开发、试玩、调试三个可执行 Skill 工作流。
-- 使用同一仓库适配 Codex 与 Claude Code 插件格式。
+## 项目包含什么
 
-Web2DKit 不负责聊天记录、模型路由、任意 shell、通用文件编辑或新的 Web IDE，这些能力应继续由宿主 Agent 负责。
+- **5 个游戏开发 Skill**：设计、开发、试玩、调试和打磨。
+- **8 个受限 MCP 工具**：项目检查、浏览器会话、状态观察、动作、断言、场景运行和运行时质量检查。
+- **框架无关的 Game Bridge**：暴露权威 JSON 状态，不泄漏渲染器对象，也不允许任意 JavaScript 执行。
+- **Codex 与 Claude Code 插件清单**：共用同一个本地 Node.js MCP Server。
 
-## 项目边界
+## Skill 工作流
 
-支持 HTML/CSS/DOM、Canvas 2D、SVG、Web Audio、WebGL 2D，以及原生 JavaScript/TypeScript、Phaser、PixiJS、Kaboom、Excalibur 等浏览器原生 2D 技术路线。
+| Skill | 适用场景 | MCP 证据 |
+|---|---|---|
+| `design-web2d-game` | 将模糊想法整理为玩家循环、垂直切片、状态契约和验收场景 | 项目检查和可验证的游戏设计 |
+| `build-web2d-game` | 开发或扩展 Canvas、DOM/SVG、Phaser、PixiJS 等 Web 2D 游戏 | 观察初始状态并断言完整循环 |
+| `playtest-web2d-game` | 验证控制、规则、生命周期、响应式 UI 和回归问题 | 确定性场景与独立视觉检查 |
+| `debug-web2d-game` | 定位第一个错误状态变化，而不是只修补表面现象 | 固定种子复现和回归断言 |
+| `polish-web2d-game` | 在不破坏规则的前提下改善手感、UI、美术、无障碍或性能 | 前后视觉证据与场景保护 |
 
-Unity WebGL、Unreal Engine、Godot、Three.js 3D 场景和依赖重量级编辑器的工作流不在范围内。
+这些 Skill 会严格区分“游戏规则证据”和“视觉质量证据”。Web2DKit 负责结构化游戏语义；截图和页面视觉检查继续使用宿主 Agent 已有的浏览器能力。
 
-v0.1 已实现框架无关 Bridge。当前能识别常见技术栈，但 Phaser、PixiJS 的深度适配仍在 Roadmap 中，不会提前宣称完成。
-
-## 本地验证
+## 快速开始
 
 需要 Node.js 22+：
 
@@ -60,13 +80,19 @@ npx playwright install chromium
 npm run validate
 ```
 
-这会运行单元测试，以及基于真实 Chromium 和内置 [Bridge 示例](./examples/bridge-demo/)的完整状态—动作—断言测试。
+随后按照[中文入门指南](./docs/getting-started.zh-CN.md)，在 Codex 或 Claude Code 中加载本地插件，并连接到一个正在运行的 Web 2D 游戏。
 
-插件本地安装与首次使用见[入门指南](./docs/getting-started.zh-CN.md)。
+可以尝试这些提示：
 
-## 一分钟接入 Game Bridge
+```text
+使用 $design-web2d-game 把这个益智游戏想法整理成一个可测试的游戏契约。
+使用 $build-web2d-game 实现第一个完整玩家循环并验证它。
+使用 $playtest-web2d-game 证明重新开始后棋盘和得分被正确重置。
+```
 
-将游戏已有的权威状态暴露出来：
+## 60 秒接入 Game Bridge
+
+暴露游戏本身已经拥有的可序列化权威状态：
 
 ```js
 window.__WEB2D_GAME__ = {
@@ -77,20 +103,26 @@ window.__WEB2D_GAME__ = {
 };
 ```
 
-Agent 随后可以通过 `web2d_session_start` → `web2d_observe` → `web2d_scenario_run` 证明游戏规则，而不是只看截图猜测结果。
+Agent 随后可以执行 `web2d_session_start` → `web2d_observe` → `web2d_scenario_run`，用状态和断言证明游戏行为，而不是根据画面猜测。详见 [Bridge 协议](./docs/bridge-protocol.md)和 [MCP 工具参考](./docs/mcp-tools.md)。
+
+## 项目边界
+
+Web2DKit 面向使用 DOM/CSS、Canvas 2D、SVG、Web Audio 或 WebGL 2D 渲染器构建的浏览器原生 2D 游戏，适用于原生 JavaScript/TypeScript，以及 Phaser、PixiJS、Excalibur、Kaboom 等框架。
+
+Unity、Unreal、Godot、Three.js 3D 场景和依赖编辑器的工作流不在当前范围内。目前已经支持框架识别；Phaser 与 PixiJS 的深度适配仍属于 Roadmap，不会提前宣称完成。
 
 ## 文档
 
 - [中文入门指南](./docs/getting-started.zh-CN.md)
 - [Architecture](./docs/architecture.md)
 - [Game Bridge protocol](./docs/bridge-protocol.md)
-- [MCP tools](./docs/mcp-tools.md)
+- [MCP tool reference](./docs/mcp-tools.md)
 - [Security boundaries](./docs/security.md)
 - [Roadmap](./ROADMAP.md)
 - [参与贡献](./CONTRIBUTING.md)
 
 ## 当前状态
 
-Web2DKit 目前是可以运行和测试的早期基础版本。浏览器集成测试已经证明核心闭环，但在稳定发布前仍需要真实项目适配器、场景文件持久化、性能预算以及 2D 游戏开发者反馈。
+Web2DKit 目前是可运行的早期基础版本。真实 Chromium 集成测试已经证明“状态 → 动作 → 断言”闭环；稳定发布前的下一道可信度门槛，是在真实的益智、动作和模拟类游戏中验证完整工作流。
 
-Web2DKit 使用 [MIT License](./LICENSE)。
+项目采用 MIT 许可证，面向希望编程 Agent 不仅能生成游戏，还能理解、试玩和验证游戏的开发者。

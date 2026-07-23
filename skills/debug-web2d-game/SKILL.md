@@ -5,7 +5,7 @@ description: Diagnose and fix reproducible browser-native 2D gameplay defects us
 
 # Debug a Web 2D Game
 
-Reduce the report to the first incorrect state transition, fix its owning layer, and preserve the reproduction as a regression scenario.
+Reduce the report to the first incorrect state transition, fix its owning layer, and preserve the reproduction as a regression scenario. Keep visual symptoms separate from rule evidence.
 
 ## Workflow
 
@@ -15,18 +15,20 @@ Reduce the report to the first incorrect state transition, fix its owning layer,
 4. Reproduce with the shortest `web2d_scenario_run` possible. If reproduction depends on uncontrolled waiting, first add deterministic stepping or a domain action.
 5. Classify the first failure using [references/failure-layers.md](references/failure-layers.md). Keep input, state/rules, lifecycle, rendering, assets, and performance as separate boundaries.
 6. Change the smallest owner of the incorrect transition. Do not rewrite the rendering stack to repair a rule defect.
-7. Re-run the exact seed and scenario, then adjacent scenarios and existing tests.
+7. Re-run the exact seed and scenario, then adjacent scenarios and existing tests. When state is correct but presentation was wrong, use the host browser/capture capability to verify the repaired rendered state.
 8. Keep the scenario in project test fixtures when it protects a real bug contract.
 9. Run `web2d_quality_check`, stop the session, and report root cause, changed boundary, before/after evidence, and remaining uncertainty.
 
 ## Debugging rules
 
 - If structured state is correct but pixels are wrong, debug rendering or assets.
+- If screenshots look correct but assertions fail, debug rules; visual plausibility is not rule correctness.
 - If native input does nothing but bridge dispatch works, debug focus, event mapping, or input lifecycle.
 - If both inputs produce the wrong state, debug rules or update order.
 - If the same seed and actions diverge, find uncontrolled time, randomness, iteration order, or asynchronous work before tuning waits.
 - If a scene works once but fails after restart, inspect subscriptions, timers, retained entities, and teardown.
 - Never fix a symptom by weakening the assertion unless the product rule itself changed.
+- Do not add arbitrary evaluation or mutation to the Bridge to make a bug easier to reproduce.
 
 ## Completion gate
 

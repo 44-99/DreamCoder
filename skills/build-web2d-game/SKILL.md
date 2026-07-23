@@ -1,34 +1,37 @@
 ---
 name: build-web2d-game
-description: Design, implement, or extend browser-native 2D games with a testable game-state boundary and Web2DKit Game Bridge. Use for HTML/CSS/Canvas/SVG/WebGL-2D games, including projects using Phaser, PixiJS, Kaboom, Excalibur, React, Vue, or vanilla JavaScript/TypeScript; do not use for Unity, Unreal, Godot, Three.js 3D, or editor-dependent engine workflows.
+description: Use when implementing, extending, or completing browser-native 2D games in HTML, Canvas, SVG, Phaser, PixiJS, Excalibur, Kaboom, React, Vue, or vanilla JavaScript/TypeScript.
 ---
 
 # Build a Web 2D Game
 
-Build around the player's loop and observable game rules, not around a preferred framework.
+Build the smallest complete player loop, then prove it through the same state and rule boundary the game owns. Route vague concepts through `design-web2d-game` first.
 
 ## Workflow
 
-1. Call `web2d_project_inspect` before choosing architecture or dependencies.
-2. State the target player, core loop, input methods, win/loss rules, and one smallest playable milestone.
-3. Select the least complex browser-native stack that satisfies those requirements. Do not add a framework solely for portfolio value.
-4. Separate authoritative game state and rule updates from rendering. Keep state JSON-serializable.
-5. Implement the playable milestone, including restart, pause/focus behavior where relevant, and bounded asset loading failures.
-6. Install `window.__WEB2D_GAME__` using [references/bridge-integration.md](references/bridge-integration.md).
-7. Start the game using its documented command. Do not ask Web2DKit to execute arbitrary shell commands.
-8. Call `web2d_session_start`, then `web2d_observe` to prove the bridge reports the real initial state.
-9. Exercise the core loop with `web2d_act` or `web2d_scenario_run`. Assert rule outcomes, not merely the absence of console errors.
-10. Run repository tests and `web2d_quality_check`. Report the playable milestone, evidence, and remaining unsupported behavior.
+1. Call `web2d_project_inspect`. Read the existing package scripts, framework, entry points, tests, and Bridge coverage before choosing structure or dependencies.
+2. Confirm the game contract: player, verbs, objective, pressure, failure/restart, progression, visual direction, inputs, and acceptance scenarios. Use [game production](references/game-production.md) when any of these are weak.
+3. Choose the least complex compatible stack using [stack selection](references/stack-selection.md). Preserve an existing stack unless migration has a concrete payoff.
+4. Separate authoritative serializable rules from rendering, framework objects, input devices, UI, audio, and asset loading. Keep scenes and renderer callbacks thin.
+5. Create an explicit action map. Route keyboard, pointer, touch, and gamepad inputs into domain actions rather than duplicating game rules per device.
+6. Define an asset manifest and art constraints before tuning collisions, anchors, camera framing, or UI around temporary dimensions.
+7. Implement one vertical slice: first actionable screen → core loop → opposition or constraint → success/failure → restart. Add only the feedback and content required to make that slice readable and satisfying.
+8. Install `window.__WEB2D_GAME__` early using [Bridge integration](references/bridge-integration.md). Expose stable domain state, not renderer internals.
+9. Start the game with its documented command. Call `web2d_session_start` with a fixed seed, then `web2d_observe` to validate the real initial state.
+10. Exercise native controls with `web2d_act`; exercise deterministic rule paths with `web2d_scenario_run`. Assert the complete loop and restart path.
+11. Use the host Agent's browser/screenshot capability for visual review. Do not add a duplicate screenshot MCP tool.
+12. Run repository tests and `web2d_quality_check`. Report exactly what is playable, what evidence passed, and what remains outside the slice.
 
-## Design constraints
+## Architecture Rules
 
-- Treat DOM, Canvas, SVG, and WebGL-2D as renderers; keep rules observable independently of pixels.
-- Prefer semantic bridge actions for rules and native key/pointer actions for input wiring.
-- Make `reset({ seed })` produce a known starting state. Route gameplay randomness through a seedable source when determinism matters.
-- Expose stable IDs for scenes and entities. Do not expose framework objects, DOM nodes, textures, circular references, or secrets.
-- Never claim support from a screenshot alone. Require structured state plus at least one gameplay assertion.
-- Preserve the host Agent's responsibilities for source editing, terminal use, Git, and generic browser inspection.
+- Simulation owns rules, entities, time, score, progression, saveable state, and lifecycle.
+- Rendering owns sprites, cameras, animation playback, particles, DOM views, and effects.
+- Asset keys and entity IDs are stable; filenames and array order are not public APIs.
+- `reset({ seed })` creates a known state. Route meaningful randomness through a seedable source.
+- Use DOM for text-heavy menus and accessible controls when it fits the selected stack; protect the playfield from dashboard-like chrome.
+- Clean up listeners, timers, tweens, input bindings, and renderer objects on scene shutdown and restart.
+- Never claim a feature works because the page rendered or produced no exception.
 
-## Completion gate
+## Completion Gate
 
-Finish only when the game starts, the bridge is discoverable, one complete player loop is playable, its state transition is asserted, runtime/resource errors are reviewed, and the exact verification commands are recorded.
+Finish only when the vertical slice is playable from its intended inputs, the Bridge reports truthful state, one complete loop and restart are asserted with a fixed seed, runtime/resource failures are reviewed, and visual claims have separate visual evidence.
