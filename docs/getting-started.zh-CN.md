@@ -26,17 +26,17 @@ npm run validate
 claude --plugin-dir /absolute/path/to/Web2DKit
 ```
 
-根目录 `.mcp.json` 会启动 `dist/server.js`，把当前 Claude 项目设置为允许访问的项目根，并加载三个 Skills。修改 Web2DKit 源码后先执行 `npm run build`，再重新加载插件。
+根目录 `.mcp.json` 会启动 `dist/server.js`，把当前 Claude 项目设置为允许访问的项目根，并加载五个 Skills。修改 Web2DKit 源码后先执行 `npm run build`，再重新加载插件。
 
 ## Codex 本地开发
 
-仓库已经包含 `.codex-plugin/plugin.json`。在 Web2DKit 正式进入 Codex marketplace 之前，可以先为目标游戏直接注册 MCP Server：
+仓库已经包含经过验证的 `.codex-plugin/plugin.json`，用于加载五个 Skills。在 Web2DKit 发布为可安装包之前，请使用绝对路径注册构建后的 MCP Server：
 
 ```bash
-codex mcp add web2dkit --env WEB2DKIT_ROOT=/absolute/path/to/your-game -- node /absolute/path/to/Web2DKit/dist/server.js
+codex mcp add web2dkit -- node /absolute/path/to/Web2DKit/dist/server.js
 ```
 
-需要完整工作流时，同时使用仓库 `skills/` 中对应的 Skill。Marketplace 分发仍在 Roadmap 中，当前 manifest、MCP Server 与 Skills 会分别进行校验。
+Codex 会把当前项目根传给 MCP Server。源码开发验收记录说明了当前“Skills 安装 + 显式 MCP 注册”的边界；Marketplace 打包仍是后续独立门槛。
 
 ## 第一次确定性验证
 
@@ -47,6 +47,14 @@ codex mcp add web2dkit --env WEB2DKIT_ROOT=/absolute/path/to/your-game -- node /
 5. 调用 `web2d_observe` 验证初始状态。
 6. 用 `web2d_scenario_run` 执行一个短场景并断言状态。
 7. 调用 `web2d_quality_check`，最后调用 `web2d_session_stop`。
+
+核心循环跑通后，把回归验证保存为严格的 `*.web2d.json` 文件，并连接到已经运行的游戏：
+
+```bash
+node /absolute/path/to/Web2DKit/dist/cli.js run --url http://127.0.0.1:4173 web2dkit/scenarios
+```
+
+场景格式、报告器和证据边界见[验收场景与 CLI](./scenarios.md)。
 
 ## 常见错误
 

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1",
+  "name": "native controls start and move the courier",
+  "seed": 42,
+  "initialAssertions": [
+    { "path": "lifecycle.status", "operator": "equals", "expected": "ready" }
+  ],
+  "steps": [
+    { "action": { "kind": "key", "key": "Enter" } },
+    { "action": { "kind": "key", "key": "ArrowRight" } }
+  ],
+  "finalAssertions": [
+    { "path": "lifecycle.status", "operator": "equals", "expected": "playing" },
+    { "path": "player.position.x", "operator": "equals", "expected": 1 },
+    { "path": "player.energy", "operator": "equals", "expected": 17 }
+  ]
+}

@@ -40,8 +40,13 @@ export interface ScenarioStep {
 export interface GameScenario {
   name: string;
   seed?: number;
+  initialAssertions?: GameAssertion[];
   steps: ScenarioStep[];
   finalAssertions?: GameAssertion[];
+}
+
+export interface ScenarioDocument extends GameScenario {
+  schemaVersion: "1";
 }
 
 export interface BridgeDescriptor {

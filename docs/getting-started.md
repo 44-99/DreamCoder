@@ -32,13 +32,13 @@ The root `.mcp.json` starts `dist/server.js`, sets `WEB2DKIT_ROOT` to the active
 
 ## Codex local development
 
-The repository includes a standards-compliant `.codex-plugin/plugin.json`. Until Web2DKit is published in a Codex marketplace, the shortest development path is to register its MCP server directly for the game project:
+The repository includes a validated `.codex-plugin/plugin.json` for the five Skills. Until Web2DKit is published as an installable package, register the built MCP server with an explicit absolute path:
 
 ```bash
-codex mcp add web2dkit --env WEB2DKIT_ROOT=/absolute/path/to/your-game -- node /absolute/path/to/Web2DKit/dist/server.js
+codex mcp add web2dkit -- node /absolute/path/to/Web2DKit/dist/server.js
 ```
 
-Use the bundled Skills from `skills/` when invoking the corresponding workflow. Marketplace packaging is tracked in the roadmap; the current manifest and server are already validated independently.
+Codex supplies the active project root to the server. The source-development verification record documents the current split between Skill installation and explicit MCP registration; marketplace packaging remains a separate roadmap gate.
 
 ## First deterministic check
 
@@ -49,6 +49,14 @@ Use the bundled Skills from `skills/` when invoking the corresponding workflow. 
 5. Call `web2d_observe` and verify the initial state.
 6. Run one short `web2d_scenario_run` with a state assertion.
 7. Call `web2d_quality_check`, then `web2d_session_stop`.
+
+Once the loop works, save its regression coverage as strict `*.web2d.json` files and run them against an already running game:
+
+```bash
+node /absolute/path/to/Web2DKit/dist/cli.js run --url http://127.0.0.1:4173 web2dkit/scenarios
+```
+
+See [Acceptance scenarios and CLI](./scenarios.md) for the schema, reporters, and evidence boundary.
 
 The included example can be served with any static HTTP server. For example:
 

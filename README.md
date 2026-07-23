@@ -54,6 +54,7 @@ Web2DKit does not replace the coding agent, browser, terminal, or renderer. It g
 - **Five game-development Skills** for design, implementation, playtesting, debugging, and polish.
 - **Eight bounded MCP tools** for project inspection, browser sessions, observation, actions, assertions, scenarios, and runtime quality checks.
 - **A framework-neutral Game Bridge** that exposes authoritative JSON state without leaking renderer objects or arbitrary JavaScript execution.
+- **Versioned Acceptance Scenarios and a bounded CLI** for repeatable local and CI rule verification.
 - **Codex and Claude Code plugin manifests** backed by the same local Node.js server.
 
 ## Skill-guided workflow
@@ -125,7 +126,12 @@ Unity, Unreal, Godot, Three.js 3D scenes, and editor-dependent pipelines are out
 - [Signal Relay end-to-end example](./examples/signal-relay/README.md)
 - [Architecture](./docs/architecture.md)
 - [Game Bridge protocol](./docs/bridge-protocol.md)
+- [Acceptance scenarios and CLI](./docs/scenarios.md)
 - [MCP tool reference](./docs/mcp-tools.md)
+- [Domain language](./CONTEXT.md)
+- [Why Web2DKit augments the host agent](./docs/adr/0001-augment-the-host-agent.md)
+- [Why scenarios are game-owned assets](./docs/adr/0002-keep-scenarios-declarative-and-game-owned.md)
+- [Latest Windows host verification](./docs/verification/2026-07-23-windows-host-development.md)
 - [Security boundaries](./docs/security.md)
 - [Roadmap](./ROADMAP.md)
 - [Contributing](./CONTRIBUTING.md)

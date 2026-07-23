@@ -33,6 +33,8 @@ Expected result:
   "nativeInput": true,
   "deterministicReplay": true,
   "winningScore": 570,
+  "pauseScenario": true,
+  "cliScenarioSuite": true,
   "qualityCheck": true
 }
 ```
@@ -51,7 +53,14 @@ Open the URL printed by Vite. Use Arrow keys or WASD to move, Escape to pause, a
 2. [`src/domain.ts`](./src/domain.ts) keeps deterministic rules independent from rendering.
 3. [`src/main.ts`](./src/main.ts) renders the game and exposes `window.__WEB2D_GAME__`.
 4. [`tests/domain.test.ts`](./tests/domain.test.ts) checks rule-level behavior without a browser.
-5. [`scripts/run-web2dkit-acceptance.mjs`](./scripts/run-web2dkit-acceptance.mjs) exercises the built Web2DKit MCP server against the running game.
+5. [`web2dkit/scenarios`](./web2dkit/scenarios/) stores three strict, versioned Acceptance Scenarios owned by the game project.
+6. [`scripts/run-web2dkit-acceptance.mjs`](./scripts/run-web2dkit-acceptance.mjs) runs the shared CLI suite and exercises the built Web2DKit MCP server against the same running game.
+
+To run only the Git-owned scenario suite, start the game with `npm run example:signal-relay:dev`, then use the printed URL:
+
+```bash
+node dist/cli.js run --url http://127.0.0.1:5173 examples/signal-relay/web2dkit/scenarios
+```
 
 The MCP assertions prove structured game state and rules. Visual inspection remains a separate host-browser responsibility because screenshots and semantic state answer different questions.
 

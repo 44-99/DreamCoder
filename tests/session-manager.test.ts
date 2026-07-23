@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SessionManager } from "../src/core/session-manager.js";
+import { runScenarioSuite } from "../src/scenarios/runner.js";
 
 let server: Server;
 let baseUrl: string;
@@ -68,5 +69,53 @@ describe("controlled gameplay session", () => {
     expect(progress).toEqual([1]);
     expect((await sessions.qualityCheck(started.sessionId)).passed).toBe(true);
     await sessions.stop(started.sessionId);
+  });
+
+  it("stops before actions when initial assertions fail", async () => {
+    const started = await sessions.start({ url: baseUrl, seed: 42 });
+    const result = await sessions.runScenario(started.sessionId, {
+      name: "reject-wrong-starting-state",
+      seed: 42,
+      initialAssertions: [{ path: "player.x", operator: "equals", expected: 99 }],
+      steps: [
+        { action: { kind: "bridge", name: "move", payload: { dx: 1, dy: 0 } } }
+      ]
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.completedSteps).toBe(0);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]?.step).toBe("initial");
+    expect(result.finalState).toMatchObject({ player: { x: 1, y: 1 }, moves: 0 });
+    await sessions.stop(started.sessionId);
+  });
+
+  it("runs the complete suite after an earlier scenario fails", async () => {
+    const result = await runScenarioSuite({
+      url: baseUrl,
+      scenarios: [
+        {
+          file: "01-fails.web2d.json",
+          scenario: {
+            schemaVersion: "1",
+            name: "fails first",
+            initialAssertions: [{ path: "moves", operator: "equals", expected: 99 }],
+            steps: []
+          }
+        },
+        {
+          file: "02-passes.web2d.json",
+          scenario: {
+            schemaVersion: "1",
+            name: "still runs",
+            initialAssertions: [{ path: "moves", operator: "equals", expected: 0 }],
+            steps: []
+          }
+        }
+      ]
+    });
+
+    expect(result).toMatchObject({ passed: false, total: 2, passedCount: 1, failedCount: 1 });
+    expect(result.scenarios.map((entry) => entry.name)).toEqual(["fails first", "still runs"]);
   });
 });

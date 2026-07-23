@@ -36,4 +36,15 @@ describe("project inspection boundary", () => {
     await expect(boundary.resolve("../outside")).rejects.toThrow("escapes WEB2DKIT_ROOT");
     await expect(boundary.resolve(path.resolve(root))).rejects.toThrow("must be relative");
   });
+
+  it("uses the packageManager declaration when a workspace has no local lockfile", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "web2dkit-workspace-"));
+    temporaryDirectories.push(root);
+    await writeFile(path.join(root, "package.json"), JSON.stringify({
+      packageManager: "npm@11.16.0",
+      scripts: { test: "vitest" }
+    }));
+
+    expect((await inspectProject(root)).packageManager).toBe("npm");
+  });
 });

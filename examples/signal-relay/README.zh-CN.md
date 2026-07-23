@@ -33,6 +33,8 @@ npm run example:signal-relay:e2e
   "nativeInput": true,
   "deterministicReplay": true,
   "winningScore": 570,
+  "pauseScenario": true,
+  "cliScenarioSuite": true,
   "qualityCheck": true
 }
 ```
@@ -51,7 +53,14 @@ npm run example:signal-relay:dev
 2. [`src/domain.ts`](./src/domain.ts) 将确定性规则与渲染分离。
 3. [`src/main.ts`](./src/main.ts) 渲染游戏并暴露 `window.__WEB2D_GAME__`。
 4. [`tests/domain.test.ts`](./tests/domain.test.ts) 在不启动浏览器时验证规则。
-5. [`scripts/run-web2dkit-acceptance.mjs`](./scripts/run-web2dkit-acceptance.mjs) 使用构建后的 Web2DKit MCP Server 对真实运行游戏做端到端验收。
+5. [`web2dkit/scenarios`](./web2dkit/scenarios/) 保存由游戏项目拥有的 3 个严格、版本化验收场景。
+6. [`scripts/run-web2dkit-acceptance.mjs`](./scripts/run-web2dkit-acceptance.mjs) 先运行共享 CLI 场景套件，再对同一个真实游戏调用构建后的 Web2DKit MCP Server。
+
+如需只运行 Git 中的场景套件，先执行 `npm run example:signal-relay:dev`，再使用 Vite 输出的网址：
+
+```bash
+node dist/cli.js run --url http://127.0.0.1:5173 examples/signal-relay/web2dkit/scenarios
+```
 
 MCP 断言负责证明结构化状态和规则；外观仍由宿主 Agent 的浏览器单独检查，因为截图和语义状态解决的是两类问题。
 

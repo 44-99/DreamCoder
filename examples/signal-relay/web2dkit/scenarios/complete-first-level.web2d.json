@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1",
+  "name": "restore all relays and transmit",
+  "seed": 42,
+  "initialAssertions": [
+    { "path": "lifecycle.status", "operator": "equals", "expected": "ready" },
+    { "path": "lifecycle.seed", "operator": "equals", "expected": 42 }
+  ],
+  "steps": [
+    { "action": { "kind": "bridge", "name": "start" }, "assertions": [{ "path": "lifecycle.status", "operator": "equals", "expected": "playing" }] },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } }, "assertions": [{ "path": "objective.nextRelay", "operator": "equals", "expected": "beta" }] },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } }, "assertions": [{ "path": "objective.nextRelay", "operator": "equals", "expected": "gamma" }] },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } }, "assertions": [{ "path": "objective.exitUnlocked", "operator": "equals", "expected": true }] },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "down" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "left" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "left" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "left" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "left" } } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "left" } } }
+  ],
+  "finalAssertions": [
+    { "path": "lifecycle.status", "operator": "equals", "expected": "won" },
+    { "path": "objective.relaysActivated", "operator": "equals", "expected": 3 },
+    { "path": "stats.moves", "operator": "equals", "expected": 16 },
+    { "path": "player.score", "operator": "greaterThanOrEqual", "expected": 500 }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "name": "pause gates movement and resume restores it",
+  "seed": 42,
+  "initialAssertions": [
+    { "path": "player.position.x", "operator": "equals", "expected": 0 }
+  ],
+  "steps": [
+    { "action": { "kind": "bridge", "name": "start" } },
+    { "action": { "kind": "bridge", "name": "togglePause" }, "assertions": [{ "path": "lifecycle.paused", "operator": "equals", "expected": true }] },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } }, "assertions": [{ "path": "player.position.x", "operator": "equals", "expected": 0 }] },
+    { "action": { "kind": "bridge", "name": "togglePause" } },
+    { "action": { "kind": "bridge", "name": "move", "payload": { "direction": "right" } } }
+  ],
+  "finalAssertions": [
+    { "path": "lifecycle.paused", "operator": "equals", "expected": false },
+    { "path": "player.position.x", "operator": "equals", "expected": 1 }
+  ]
+}

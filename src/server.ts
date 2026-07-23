@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { ProjectBoundary, inspectProject } from "./core/project-inspector.js";
 import { SessionManager } from "./core/session-manager.js";
+import { ActionSchema, AssertionSchema, GameScenarioSchema } from "./scenarios/schema.js";
 import type { GameAction, GameAssertion, GameScenario, ToolEnvelope } from "./types.js";
 
 const ErrorSchema = z.object({
@@ -20,60 +21,6 @@ const EnvelopeSchema = z.object({
   ok: z.boolean(),
   data: z.unknown().optional(),
   error: ErrorSchema.optional()
-});
-
-const ActionSchema = z.union([
-  z.object({
-    kind: z.literal("key"),
-    key: z.string().min(1),
-    phase: z.enum(["press", "down", "up"]).optional(),
-    durationMs: z.number().int().min(0).max(30_000).optional()
-  }),
-  z.object({
-    kind: z.literal("pointer"),
-    x: z.number().finite(),
-    y: z.number().finite(),
-    phase: z.enum(["click", "down", "up"]).optional(),
-    button: z.enum(["left", "middle", "right"]).optional()
-  }),
-  z.object({
-    kind: z.literal("wait"),
-    durationMs: z.number().int().min(0).max(60_000).optional(),
-    frames: z.number().int().min(1).max(3_600).optional()
-  }).refine((value) => value.durationMs !== undefined || value.frames !== undefined, {
-    message: "wait requires durationMs or frames"
-  }),
-  z.object({
-    kind: z.literal("bridge"),
-    name: z.string().min(1),
-    payload: z.unknown().optional()
-  })
-]);
-
-const AssertionSchema = z.object({
-  path: z.string(),
-  operator: z.enum([
-    "equals",
-    "notEquals",
-    "greaterThan",
-    "greaterThanOrEqual",
-    "lessThan",
-    "lessThanOrEqual",
-    "includes",
-    "exists"
-  ]),
-  expected: z.unknown().optional(),
-  message: z.string().optional()
-});
-
-const ScenarioSchema = z.object({
-  name: z.string().min(1),
-  seed: z.number().int().min(0).max(0xffffffff).optional(),
-  steps: z.array(z.object({
-    action: ActionSchema,
-    assertions: z.array(AssertionSchema).max(100).optional()
-  })).max(500),
-  finalAssertions: z.array(AssertionSchema).max(100).optional()
 });
 
 function errorCode(error: unknown): string {
@@ -230,7 +177,7 @@ server.registerTool(
   {
     title: "Run a deterministic gameplay scenario",
     description: "Reset with a seed, replay bounded actions, evaluate step and final assertions, and return the exact failing step.",
-    inputSchema: z.object({ sessionId: z.string().uuid(), scenario: ScenarioSchema }),
+    inputSchema: z.object({ sessionId: z.string().uuid(), scenario: GameScenarioSchema }),
     outputSchema: EnvelopeSchema,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },

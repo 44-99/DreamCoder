@@ -64,11 +64,13 @@ async function walk(directory: string, root: string, files: string[]): Promise<v
   }
 }
 
-function detectPackageManager(files: string[]): ProjectInspection["packageManager"] {
+function detectPackageManager(files: string[], declared?: string): ProjectInspection["packageManager"] {
   if (files.includes("pnpm-lock.yaml")) return "pnpm";
   if (files.includes("yarn.lock")) return "yarn";
   if (files.includes("bun.lock") || files.includes("bun.lockb")) return "bun";
   if (files.includes("package-lock.json")) return "npm";
+  const name = declared?.split("@", 1)[0];
+  if (name === "npm" || name === "pnpm" || name === "yarn" || name === "bun") return name;
   return "unknown";
 }
 
@@ -76,7 +78,12 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
   const files: string[] = [];
   await walk(root, root, files);
 
-  let packageJson: { scripts?: Record<string, string>; dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {};
+  let packageJson: {
+    packageManager?: string;
+    scripts?: Record<string, string>;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  } = {};
   if (files.includes("package.json")) {
     packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   }
@@ -115,7 +122,7 @@ export async function inspectProject(root: string): Promise<ProjectInspection> {
 
   return {
     root,
-    packageManager: detectPackageManager(files),
+    packageManager: detectPackageManager(files, packageJson.packageManager),
     frameworks,
     scripts: packageJson.scripts ?? {},
     entryCandidates,

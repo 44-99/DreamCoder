@@ -2,22 +2,32 @@
   "name": "web2dkit",
   "version": "0.1.0",
   "description": "Game-development Skills and MCP tools for designing, building, playtesting, debugging, and polishing browser-native 2D games with coding agents.",
-  "author": { "name": "44-99", "url": "https://github.com/44-99" },
+  "author": {
+    "name": "44-99",
+    "url": "https://github.com/44-99"
+  },
   "homepage": "https://github.com/44-99/Web2DKit",
   "repository": "https://github.com/44-99/Web2DKit",
   "license": "MIT",
-  "keywords": ["web-2d", "game-development", "game-design", "mcp", "agent-skills", "playtesting"],
+  "keywords": [
+    "web-2d",
+    "game-development",
+    "game-design",
+    "mcp",
+    "agent-skills",
+    "playtesting"
+  ],
   "skills": "./skills/",
-  "mcpServers": {
-    "web2dkit": { "command": "node", "args": ["${PLUGIN_ROOT}/dist/server.js"] }
-  },
   "interface": {
     "displayName": "Web2DKit",
     "shortDescription": "Design, build, and verify browser-native 2D games",
     "longDescription": "Guide coding agents from a focused 2D game contract through implementation, visual polish, deterministic gameplay scenarios, domain assertions, and repeatable quality checks.",
     "developerName": "44-99",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Interactive"],
+    "capabilities": [
+      "Read",
+      "Interactive"
+    ],
     "websiteURL": "https://github.com/44-99/Web2DKit",
     "defaultPrompt": [
       "Turn this idea into a focused Web 2D game contract and first playable slice.",

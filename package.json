@@ -43,6 +43,7 @@
     "LICENSE"
   ],
   "bin": {
+    "web2dkit": "dist/cli.js",
     "web2dkit-mcp": "dist/server.js"
   },
   "exports": {

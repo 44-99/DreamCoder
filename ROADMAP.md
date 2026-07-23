@@ -9,18 +9,21 @@ This roadmap is ordered by developer value and evidence, not by the number of te
 - [x] Fixed-seed browser sessions, native and semantic actions, state assertions, and scenarios
 - [x] Real Chromium integration test
 - [x] Cross-host Skill set and Codex/Claude plugin manifests
+- [x] Reproducible DOM/CSS puzzle example (Signal Relay)
 - [ ] Test local installation end to end in current Codex and Claude Code releases
-- [ ] Validate the Bridge and scenario model in three real games from different genres
+- [x] Versioned scenario files and a bounded CLI runner suitable for CI
+- [ ] Validate fixed-step scenarios in a real-time Phaser action game
+- [ ] Validate long-lived state and branching in a narrative/simulation game
 - [ ] Publish the first npm prerelease and Codex/Claude installation packages
 
-## Next — real project adapters
+## Next — evidence-based adapters
 
-- [ ] Phaser adapter with scene, entity, input, and fixed-step examples
+- [ ] Extract a Phaser adapter only after the action reference game reveals stable repeated glue
 - [ ] PixiJS adapter with an explicit user-owned state model
-- [ ] DOM/SVG reference game outside the arcade genre
-- [ ] Versioned scenario files and a CLI runner suitable for CI
 - [x] Cancellation and progress reporting for long scenario runs
 - [ ] Configurable performance budgets and trace artifacts
+
+See [ADR 0002](./docs/adr/0002-keep-scenarios-declarative-and-game-owned.md) for the scenario ownership and runner boundary.
 
 ## Later — ecosystem quality
 

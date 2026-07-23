@@ -178,7 +178,7 @@ export class SessionManager {
     scenario: string;
     passed: boolean;
     completedSteps: number;
-    failures: Array<{ step: number | "final"; results: AssertionResult[] }>;
+    failures: Array<{ step: number | "initial" | "final"; results: AssertionResult[] }>;
     finalState: GameState;
   }> {
     const session = this.requireSession(sessionId);
@@ -188,7 +188,22 @@ export class SessionManager {
       await bridge.reset({ seed });
     }, scenario.seed ?? session.seed);
 
-    const failures: Array<{ step: number | "final"; results: AssertionResult[] }> = [];
+    const failures: Array<{ step: number | "initial" | "final"; results: AssertionResult[] }> = [];
+    const initialState = (await this.observe(sessionId)).state;
+    if (scenario.initialAssertions?.length) {
+      const results = evaluateAssertions(initialState, scenario.initialAssertions);
+      if (results.some((result) => !result.passed)) {
+        failures.push({ step: "initial", results });
+        return {
+          sessionId,
+          scenario: scenario.name,
+          passed: false,
+          completedSteps: 0,
+          failures,
+          finalState: initialState
+        };
+      }
+    }
     let completedSteps = 0;
     for (const [index, step] of scenario.steps.entries()) {
       if (options.signal?.aborted) throw new Error("Scenario was cancelled by the MCP client.");

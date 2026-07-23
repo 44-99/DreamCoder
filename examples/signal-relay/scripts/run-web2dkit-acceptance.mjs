@@ -1,13 +1,16 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { execFile } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "vite";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const web2dkitRoot = process.env.WEB2DKIT_REPO
   ? path.resolve(process.env.WEB2DKIT_REPO)
   : path.resolve(projectRoot, "..", "..");
+const executeFile = promisify(execFile);
 
 const client = new Client({ name: "signal-relay-acceptance", version: "0.1.0" });
 const transport = new StdioClientTransport({
@@ -29,33 +32,6 @@ async function call(tool, args) {
   return dataOf(await client.callTool({ name: tool, arguments: args }), tool);
 }
 
-const moves = [
-  "right", "down",
-  "right", "right", "right", "right",
-  "down", "down", "down", "down",
-  "down", "left", "left", "left", "left", "left"
-];
-
-const winningScenario = {
-  name: "restore all relays and transmit",
-  seed: 42,
-  steps: [
-    { action: { kind: "bridge", name: "start" }, assertions: [{ path: "lifecycle.status", operator: "equals", expected: "playing" }] },
-    ...moves.map((direction, index) => ({
-      action: { kind: "bridge", name: "move", payload: { direction } },
-      ...(index === 1 ? { assertions: [{ path: "objective.nextRelay", operator: "equals", expected: "beta" }] } : {}),
-      ...(index === 5 ? { assertions: [{ path: "objective.nextRelay", operator: "equals", expected: "gamma" }] } : {}),
-      ...(index === 9 ? { assertions: [{ path: "objective.exitUnlocked", operator: "equals", expected: true }] } : {})
-    }))
-  ],
-  finalAssertions: [
-    { path: "lifecycle.status", operator: "equals", expected: "won" },
-    { path: "objective.relaysActivated", operator: "equals", expected: 3 },
-    { path: "stats.moves", operator: "equals", expected: 16 },
-    { path: "player.score", operator: "greaterThanOrEqual", expected: 500 }
-  ]
-};
-
 let sessionId;
 let gameServer;
 try {
@@ -67,6 +43,24 @@ try {
   await gameServer.listen();
   const gameUrl = gameServer.resolvedUrls?.local[0];
   if (!gameUrl) throw new Error("Vite did not expose a local Signal Relay URL.");
+  const scenarioDirectory = path.join(projectRoot, "web2dkit", "scenarios");
+  const cliRun = await executeFile(process.execPath, [
+    path.join(web2dkitRoot, "dist", "cli.js"), "run", "--url", gameUrl,
+    "--reporter", "json", scenarioDirectory
+  ], { cwd: projectRoot });
+  const cliSuite = JSON.parse(cliRun.stdout);
+
+  const schemaModuleUrl = pathToFileURL(path.join(web2dkitRoot, "dist", "scenarios", "schema.js")).href;
+  const { loadScenarioDocuments } = await import(schemaModuleUrl);
+  const documents = await loadScenarioDocuments([scenarioDirectory]);
+  const scenario = (name) => {
+    const document = documents.find((item) => item.scenario.name === name)?.scenario;
+    if (!document) throw new Error(`Missing scenario: ${name}`);
+    const { schemaVersion: _schemaVersion, ...value } = document;
+    return value;
+  };
+  const winningScenario = scenario("restore all relays and transmit");
+  const pauseScenario = scenario("pause gates movement and resume restores it");
 
   await client.connect(transport);
   const toolNames = (await client.listTools()).tools.map((tool) => tool.name);
@@ -100,21 +94,6 @@ try {
   const winningRun1 = await call("web2d_scenario_run", { sessionId, scenario: winningScenario });
   const winningRun2 = await call("web2d_scenario_run", { sessionId, scenario: winningScenario });
 
-  const pauseScenario = {
-    name: "pause gates movement and resume restores it",
-    seed: 42,
-    steps: [
-      { action: { kind: "bridge", name: "start" } },
-      { action: { kind: "bridge", name: "togglePause" }, assertions: [{ path: "lifecycle.paused", operator: "equals", expected: true }] },
-      { action: { kind: "bridge", name: "move", payload: { direction: "right" } }, assertions: [{ path: "player.position.x", operator: "equals", expected: 0 }] },
-      { action: { kind: "bridge", name: "togglePause" } },
-      { action: { kind: "bridge", name: "move", payload: { direction: "right" } } }
-    ],
-    finalAssertions: [
-      { path: "lifecycle.paused", operator: "equals", expected: false },
-      { path: "player.position.x", operator: "equals", expected: 1 }
-    ]
-  };
   const pauseRun = await call("web2d_scenario_run", { sessionId, scenario: pauseScenario });
   const quality = await call("web2d_quality_check", { sessionId });
   const deterministicReplay = JSON.stringify(winningRun1.finalState) === JSON.stringify(winningRun2.finalState);
@@ -124,6 +103,7 @@ try {
     && winningRun2.passed
     && deterministicReplay
     && pauseRun.passed
+    && cliSuite.passed
     && quality.passed;
 
   if (!passed) {
@@ -140,6 +120,7 @@ try {
     deterministicReplay,
     winningScore: winningRun1.finalState.player.score,
     pauseScenario: pauseRun.passed,
+    cliScenarioSuite: cliSuite.passed,
     qualityCheck: quality.passed
   }, null, 2));
 } finally {
